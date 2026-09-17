@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>English Memory Match</title>
+<style>
+:root{--bg:#eef5ff;--ink:#172033;--blue:#3f66e8;--card:#3157cf;--green:#23a55a}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(#eaf3ff,#fff);color:var(--ink)}
+button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradient(135deg,#3157cf,#7246d8);display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}
+.panel{width:min(680px,96vw);background:#fff;border-radius:24px;padding:24px;text-align:center;box-shadow:0 20px 60px #0005}
+.badge{display:inline-block;background:#e9efff;color:#3157cf;border-radius:999px;padding:6px 12px;font-weight:800;margin:4px}
+.big{font-size:clamp(26px,5vw,44px);margin:8px}.primary{border:0;border-radius:14px;background:var(--blue);color:white;padding:12px 18px;font-weight:800;cursor:pointer}
+.secondary{border:1px solid #cbd6ee;border-radius:12px;background:white;padding:10px 14px;font-weight:700;cursor:pointer}
+#app{max-width:1050px;margin:auto;padding:12px}.top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.stats{display:flex;gap:8px;flex-wrap:wrap}.pill{background:white;border-radius:14px;padding:9px 12px;box-shadow:0 3px 14px #18366b18;font-weight:800}
+#message{background:white;border-radius:16px;padding:12px;text-align:center;margin:10px 0;font-weight:800;min-height:46px}
+#board{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:760px;margin:10px auto}
+.card{aspect-ratio:1/1;border:0;border-radius:18px;background:linear-gradient(145deg,#426be8,#2448bd);color:white;font-size:clamp(28px,7vw,56px);font-weight:900;box-shadow:0 7px 0 #18348f;cursor:pointer;position:relative;overflow:hidden}
+.card.revealed,.card.matched{background:white;color:#172033;box-shadow:0 4px 15px #19335d22;border:3px solid #d8e4fa}
+.card.matched{border-color:#61ca86;background:#f0fff5}.animal{font-size:clamp(38px,8vw,76px);display:block}.animalName{font-size:clamp(12px,2.5vw,20px);font-weight:900;margin-top:3px}
+.controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:12px}.listen{background:#159957}.stop{background:#d54b4b}.voiceOn{background:#159957!important}
+#transcript{text-align:center;color:#506078;min-height:24px}.players{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:8px}.playerBox{background:white;border:2px solid transparent;border-radius:14px;padding:8px 12px;font-weight:800}.playerBox.active{border-color:#3157cf;background:#edf2ff}
+#tutorial{display:none;position:fixed;inset:0;background:#15213ed9;z-index:40;overflow-y:auto;padding:8px;align-items:flex-start;justify-content:center}
+.tutorialCard{width:min(720px,96vw);background:white;border-radius:22px;padding:18px;text-align:center;margin:auto;position:relative}
+#closeTut{position:sticky;top:0;float:right}.demo{height:190px;background:#edf4ff;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:10px;font-size:70px}
+.alt{margin:4px;padding:7px 10px;border:1px solid #cbd6ee;border-radius:10px;background:white;font-weight:700;cursor:pointer}
+#namePrompt{display:none;position:fixed;inset:0;background:#15213ed9;z-index:35;align-items:center;justify-content:center;padding:15px}
+.nameCard{background:white;border-radius:22px;padding:25px;text-align:center;width:min(480px,94vw)}#promptAnimal{font-size:100px}
+@media(max-width:600px){#board{gap:7px}.card{border-radius:13px}.panel{padding:16px}}
+
+/* : compact one-screen game board */
+#app{max-width:900px;padding:5px 10px}
+.top h2{font-size:20px !important}
+.pill{padding:5px 9px;font-size:13px}
+#players{margin:3px}
+.playerBox{padding:5px 9px;font-size:13px}
+#message{padding:7px;margin:4px 0;min-height:34px;font-size:14px}
+#board{
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:7px;
+  width:min(520px,92vw);
+  margin:5px auto;
+}
+.card{
+  aspect-ratio:1.18/1;
+  border-radius:12px;
+  font-size:clamp(22px,4vw,38px);
+  box-shadow:0 4px 0 #18348f;
+}
+.animal{font-size:clamp(28px,5vw,48px)}
+.controls{margin:5px;gap:5px}
+.controls button{padding:7px 10px;font-size:13px}
+#transcript{font-size:12px;min-height:18px}
+@media(max-height:700px){
+  #app{padding-top:2px}
+  .top h2{font-size:17px !important;margin:2px !important}
+  #board{width:min(440px,86vw);gap:5px;margin:3px auto}
+  .card{aspect-ratio:1.3/1}
+  .animal{font-size:34px}
+  #message{padding:5px;min-height:29px}
+  .playerBox{padding:3px 7px}
+  .controls button{padding:5px 8px}
+}
+
+
+#tDemo.tutorialClickedPreview{min-height:105px;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:900;line-height:1}
+.tutorialNumberPreview{width:88px;height:88px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:#3157d5;color:white;box-shadow:0 5px 0 #18348f;font-size:48px;font-weight:900}
+
+#voiceToggle{font-size:20px!important;font-weight:900!important;padding:13px 24px!important;min-width:190px!important;border-radius:16px!important}
+#scoreScreen{display:none;position:fixed;inset:0;background:#15213ef2;z-index:60;align-items:center;justify-content:center;padding:18px}
+.scoreCard{background:white;width:min(760px,96vw);max-height:92vh;overflow:auto;border-radius:24px;padding:22px;text-align:center}
+.scoreTable{width:100%;border-collapse:collapse;margin:18px 0}
+.scoreTable th,.scoreTable td{padding:11px 8px;border-bottom:1px solid #dce3f4;text-align:center}
+.scoreTable th{background:#eef3ff}
+
+#answerBtn.vocabOff{background:#d9363e!important;color:white!important;border-color:#d9363e!important}
+#answerBtn.vocabOn{background:#1f9d55!important;color:white!important;border-color:#1f9d55!important}
+
+.setupGenre{opacity:.72;filter:saturate(.7)}
+.setupGenre.selectedGenre{opacity:1;outline:4px solid #1f9d55;filter:none;transform:scale(1.02)}
+
+.difficultyBtn{opacity:.72;filter:saturate(.7)}
+.difficultyBtn.selectedDifficulty{opacity:1;outline:4px solid #1f9d55;filter:none;transform:scale(1.02)}
+
+.sizeBtn{opacity:.72;filter:saturate(.7);padding:10px 5px!important}
+.sizeBtn.selectedSize{opacity:1;outline:4px solid #1f9d55;filter:none;transform:scale(1.02)}
+.sizeBtn small{font-size:12px}
+@media(max-width:650px){
+ .sizeBtn{font-size:12px!important;padding:9px 3px!important}
+}
+
+.manualAnswerRow{display:flex;justify-content:center;gap:22px;margin-top:14px}
+.manualJudge{width:72px;height:58px;border:0;border-radius:16px;color:white;font-size:38px;font-weight:900;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.18)}
+.correctJudge{background:#159957}
+.wrongJudge{background:#d54b4b}
+.manualJudge:active{transform:translateY(2px);box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.manualHint{font-size:13px;margin-top:8px;color:#667085}
+
+.playerSelect{
+ width:min(280px,90%);min-height:52px;padding:10px 44px 10px 16px;margin:10px;
+ border-radius:12px;border:2px solid #bbc7dd;background:#fff;
+ font-size:18px;font-weight:700;text-align:center;cursor:pointer;
+}
+.playerSelect:focus{outline:3px solid rgba(82,104,232,.22);border-color:#5268e8}
+
+.setupSelect{
+ width:min(320px,92%);min-height:54px;padding:10px 44px 10px 16px;margin:8px 0 18px;
+ border-radius:12px;border:2px solid #bbc7dd;background:#fff;
+ font-size:17px;font-weight:700;text-align:center;cursor:pointer;
+}
+.setupSelect:focus{outline:3px solid rgba(82,104,232,.22);border-color:#5268e8}
+
+.creatorCredit{
+ margin-top:20px;padding-top:14px;border-top:1px solid #d9e0ec;
+ font-size:14px;line-height:1.6;color:#667085;text-align:center;
+}
+.creatorCredit strong{color:#344054}
+.creatorCredit span{font-size:12px}
+
+#startGame{
+ background:#d92d20;
+ border-color:#d92d20;
+ color:white;
+}
+#startGame:hover{background:#b42318;border-color:#b42318}
+
+#startScreen h2{
+ font-size:17px;
+ line-height:1.15;
+ margin-top:9px !important;
+ margin-bottom:5px !important;
+}
+#startScreen .creatorCredit{
+ margin-top:12px;
+ padding-top:9px;
+ line-height:1.4;
+}
+
+/* Compact tutorial lists for large boards */
+#alts.tutorialManyItems{
+ display:grid;
+ grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:5px;
+ width:100%;
+}
+#alts.tutorialManyItems .alt{
+ font-size:12px;
+ line-height:1.1;
+ padding:6px 3px;
+ min-height:30px;
+ margin:0;
+ white-space:normal;
+ overflow-wrap:anywhere;
+}
+@media (max-width:600px){
+ #alts.tutorialManyItems{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:4px;
+ }
+ #alts.tutorialManyItems .alt{
+  font-size:10.5px;
+  padding:5px 2px;
+  min-height:27px;
+ }
+}
+
+#prevT{
+ background:#fde2e2 !important;
+ border-color:#f3a6a6 !important;
+ color:#9b1c1c !important;
+}
+#nextT{
+ background:#dcfce7 !important;
+ border-color:#86d9a3 !important;
+ color:#166534 !important;
+}
+#prevT:hover{background:#fbd0d0 !important}
+#nextT:hover{background:#c8f5d6 !important}
+
+/* Slightly smaller tutorial preview so the tutorial fits better */
+#tDemo{
+ transform:scale(.86);
+ transform-origin:center;
+ margin-top:-5px;
+ margin-bottom:-5px;
+}
+#tDemo .tutorialNumberPreview{
+ transform:scale(.90);
+ transform-origin:center;
+}
+</style>
+</head>
+<body>
+<div id="startScreen" class="screen">
+ <div class="startCard">
+  <div class="badge">Memory Game • </div>
+  <div class="big">🐾 English Memory Match</div>
+  <p>Choose the number of players and a category, then start the game.</p>
+  <label><b>Number of Players</b><br>
+   <select id="playerCount" class="playerSelect" aria-label="Number of players">
+    <option value="1" selected>1 Player</option>
+    <option value="2">2 Players</option>
+    <option value="3">3 Players</option>
+    <option value="4">4 Players</option>
+    <option value="5">5 Players</option>
+    <option value="6">6 Players</option>
+    <option value="7">7 Players</option>
+    <option value="8">8 Players</option>
+    <option value="9">9 Players</option>
+    <option value="10">10 Players</option>
+   </select>
+  </label>
+  <h2 style="margin:12px 0 8px">Choose a Category</h2>
+  <select id="categorySelect" class="setupSelect" aria-label="Choose a category">
+   <option value="animals" selected>🐾 Animals</option>
+   <option value="food">🍽️ Food</option>
+   <option value="sports">🏅 Sports</option>
+   <option value="fruit">🍎 Fruit</option>
+   <option value="transportation">🚗 Transportation</option>
+   <option value="clothes">👕 Clothes & Accessories</option>
+   <option value="home">🏠 Home & Objects</option>
+   <option value="plants">🥦 Vegetables & Plants</option>
+   <option value="nature">🌦️ Weather & Nature</option>
+   <option value="music">🎵 Music</option>
+  </select>
+  <h2 style="margin:16px 0 8px">Difficulty Level</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 20px">
+   <button class="primary difficultyBtn selectedDifficulty" data-difficulty="easy">Easy</button>
+   <button class="primary difficultyBtn" data-difficulty="medium">Medium</button>
+   <button class="primary difficultyBtn" data-difficulty="hard">Hard</button>
+  </div>
+  <h2 style="margin:16px 0 8px">Table Size</h2>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0 20px">
+   <button class="primary sizeBtn" data-size="verySmall">Very Small<br><small>2 × 2</small></button>
+   <button class="primary sizeBtn" data-size="small">Small<br><small>2 × 3</small></button>
+   <button class="primary sizeBtn selectedSize" data-size="medium">Medium<br><small>3 × 4</small></button>
+   <button class="primary sizeBtn" data-size="large">Large<br><small>4 × 4</small></button>
+   <button class="primary sizeBtn" data-size="veryLarge">Very Large<br><small>6 × 4</small></button>
+  </div>
+  <button class="primary" id="startGame">Start Game</button>
+  <div class="creatorCredit">
+   Designed &amp; Created by <strong>Sadegh Mosleh</strong><br>
+   <span>© 2026 Sadegh Mosleh. All rights reserved.</span>
+  </div>
+ </div>
+</div>
+
+<div id="app">
+ <div class="top"><h2 style="margin:5px">🐾 English Memory Match</h2>
+  <div class="stats"><div class="pill">Pairs <span id="pairs">0</span>/<span id="pairTotal">6</span></div></div>
+ </div>
+<span id="currentPlayer" style="display:none">1</span>
+ <div id="players" class="players"></div>
+ <div id="message">Say a card number, for example: “Card five.”</div>
+<div id="liveStats" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:6px 0">
+ <span class="pill">⏱️ Time: <b id="liveTime">0.0 s</b></span>
+ <span class="pill">❌ Unmatched: <b id="liveMiss">0</b></span>
+ <span class="pill">✅ Matches: <b id="liveMatch">0</b></span>
+</div>
+ <div id="board"></div>
+ <div class="controls">
+  <button class="primary stop" id="voiceToggle">🎤 Voice: OFF</button>
+  <button class="secondary" id="tutorialBtn">📘 Tutorial</button>
+  <button class="secondary" id="restart">↻ Restart</button>
+ </div>
+ <div id="transcript"></div>
+</div>
+
+<div id="namePrompt">
+ <div class="nameCard">
+  <h2>🎉 It's a match!</h2><div id="promptAnimal"></div>
+  <p><b>Press the button, then say the animal's name.</b></p>
+  <button id="answerBtn" class="primary">🎤 Say the Animal</button>
+  <div class="manualAnswerRow">
+   <button id="manualCorrect" type="button" class="manualJudge correctJudge" aria-label="Mark answer correct">✓</button>
+   <button id="manualWrong" type="button" class="manualJudge wrongJudge" aria-label="Mark answer wrong">✕</button>
+  </div>
+  <div class="manualHint">Use these buttons if voice recognition is unavailable.</div>
+  <div id="nameStatus" style="margin-top:10px"></div>
+ </div>
+</div>
+
+<div id="scoreScreen">
+ <div class="scoreCard">
+  <div class="badge">Final Scoreboard</div>
+  <h2>Game Results</h2>
+  <div id="scoreContent"></div>
+  <button class="primary" id="scoreRestart">Play Again</button>
+ </div>
+</div>
+<div id="tutorial">
+ <div class="tutorialCard">
+  <button id="closeTut" class="secondary">✕ Close</button>
+  <div class="badge">Tutorial</div><h2 id="tTitle">Choose a card</h2>
+  <div id="tDemo" class="demo">5️⃣</div>
+  <p id="tText">Say the number of the card you want to reveal.</p>
+  <button id="hearShow" class="primary">🔊▶ Hear & Show Action</button>
+  <div style="margin-top:12px"><b>You can also say:</b><div id="alts"></div></div>
+  <div style="margin-top:14px"><button id="prevT" class="secondary">← Previous</button> <button id="nextT" class="secondary">Next →</button></div>
+ </div>
+</div>
+
+<script>
+const categories={
+ animals:[
+  {name:"dog",icon:"🐶"},
+  {name:"cat",icon:"🐱"},
+  {name:"lion",icon:"🦁"},
+  {name:"tiger",icon:"🐯"},
+  {name:"elephant",icon:"🐘"},
+  {name:"monkey",icon:"🐒"},
+  {name:"rabbit",icon:"🐰"},
+  {name:"bear",icon:"🐻"},
+  {name:"horse",icon:"🐴"},
+  {name:"cow",icon:"🐮"},
+  {name:"pig",icon:"🐷"},
+  {name:"sheep",icon:"🐑"},
+  {name:"goat",icon:"🐐"},
+  {name:"duck",icon:"🦆"},
+  {name:"chicken",icon:"🐔"},
+  {name:"bird",icon:"🐦"},
+  {name:"frog",icon:"🐸"},
+  {name:"mouse",icon:"🐭"},
+  {name:"panda",icon:"🐼"},
+  {name:"fox",icon:"🦊"},
+  {name:"wolf",icon:"🐺"},
+  {name:"deer",icon:"🦌"},
+  {name:"zebra",icon:"🦓"},
+  {name:"giraffe",icon:"🦒"},
+  {name:"camel",icon:"🐫"},
+  {name:"kangaroo",icon:"🦘"},
+  {name:"koala",icon:"🐨"},
+  {name:"eagle",icon:"🦅"},
+  {name:"owl",icon:"🦉"},
+  {name:"penguin",icon:"🐧"},
+  {name:"dolphin",icon:"🐬"},
+  {name:"whale",icon:"🐋"},
+  {name:"shark",icon:"🦈"},
+  {name:"octopus",icon:"🐙"},
+  {name:"turtle",icon:"🐢"},
+  {name:"snake",icon:"🐍"},
+  {name:"crocodile",icon:"🐊"},
+  {name:"gorilla",icon:"🦍"},
+  {name:"leopard",icon:"🐆"},
+  {name:"hippopotamus",icon:"🦛"},
+  {name:"rhinoceros",icon:"🦏"},
+  {name:"orangutan",icon:"🦧"},
+  {name:"sloth",icon:"🦥"},
+  {name:"otter",icon:"🦦"},
+  {name:"beaver",icon:"🦫"},
+  {name:"badger",icon:"🦡"},
+  {name:"skunk",icon:"🦨"},
+  {name:"hedgehog",icon:"🦔"},
+  {name:"raccoon",icon:"🦝"},
+  {name:"moose",icon:"🫎"},
+  {name:"buffalo",icon:"🐃"},
+  {name:"boar",icon:"🐗"},
+  {name:"flamingo",icon:"🦩"},
+  {name:"peacock",icon:"🦚"},
+  {name:"parrot",icon:"🦜"},
+  {name:"swan",icon:"🦢"},
+  {name:"seal",icon:"🦭"},
+  {name:"lobster",icon:"🦞"},
+  {name:"squid",icon:"🦑"},
+  {name:"bat",icon:"🦇"}
+ ],
+ food:[
+  {name:"pizza",icon:"🍕"},
+  {name:"hamburger",icon:"🍔"},
+  {name:"sandwich",icon:"🥪"},
+  {name:"cheese",icon:"🧀"},
+  {name:"egg",icon:"🥚"},
+  {name:"bread",icon:"🍞"},
+  {name:"rice",icon:"🍚"},
+  {name:"stew",icon:"🍲"},
+  {name:"salad",icon:"🥗"},
+  {name:"chicken leg",icon:"🍗"},
+  {name:"fries",icon:"🍟"},
+  {name:"cake",icon:"🍰"},
+  {name:"cookie",icon:"🍪"},
+  {name:"chocolate",icon:"🍫"},
+  {name:"ice cream",icon:"🍨"},
+  {name:"pancakes",icon:"🥞"},
+  {name:"spaghetti",icon:"🍝"},
+  {name:"hot dog",icon:"🌭"},
+  {name:"popcorn",icon:"🍿"},
+  {name:"candy",icon:"🍬"},
+  {name:"steak",icon:"🥩"},
+  {name:"shrimp",icon:"🍤"},
+  {name:"sushi",icon:"🍣"},
+  {name:"taco",icon:"🌮"},
+  {name:"burrito",icon:"🌯"},
+  {name:"waffle",icon:"🧇"},
+  {name:"bacon",icon:"🥓"},
+  {name:"butter",icon:"🧈"},
+  {name:"pretzel",icon:"🥨"},
+  {name:"noodles",icon:"🍜"},
+  {name:"dumpling",icon:"🥟"},
+  {name:"curry",icon:"🍛"},
+  {name:"fried egg",icon:"🍳"},
+  {name:"falafel",icon:"🧆"},
+  {name:"pie",icon:"🥧"},
+  {name:"cupcake",icon:"🧁"},
+  {name:"honey",icon:"🍯"},
+  {name:"cereal",icon:"🥣"},
+  {name:"milk",icon:"🥛"},
+  {name:"doughnut",icon:"🍩"},
+  {name:"custard",icon:"🍮"},
+  {name:"rice ball",icon:"🍙"},
+  {name:"rice cracker",icon:"🍘"},
+  {name:"bento",icon:"🍱"},
+  {name:"oden",icon:"🍢"},
+  {name:"dango",icon:"🍡"},
+  {name:"fortune cookie",icon:"🥠"},
+  {name:"takeout box",icon:"🥡"},
+  {name:"tamale",icon:"🫔"},
+  {name:"flatbread",icon:"🫓"}
+ ],
+ sports:[
+  {name:"football",icon:"⚽"},
+  {name:"basketball",icon:"🏀"},
+  {name:"tennis",icon:"🎾"},
+  {name:"baseball",icon:"⚾"},
+  {name:"volleyball",icon:"🏐"},
+  {name:"boxing",icon:"🥊"},
+  {name:"swimming",icon:"🏊"},
+  {name:"running",icon:"🏃"},
+  {name:"cycling",icon:"🚴"},
+  {name:"golf",icon:"⛳"},
+  {name:"rugby",icon:"🏉"},
+  {name:"ice hockey",icon:"🏒"},
+  {name:"skiing",icon:"⛷️"},
+  {name:"ice skating",icon:"⛸️"},
+  {name:"surfing",icon:"🏄"},
+  {name:"bowling",icon:"🎳"},
+  {name:"martial arts",icon:"🥋"},
+  {name:"gymnastics",icon:"🤸"},
+  {name:"wrestling",icon:"🤼"},
+  {name:"badminton",icon:"🏸"},
+  {name:"table tennis",icon:"🏓"},
+  {name:"cricket",icon:"🏏"},
+  {name:"snowboarding",icon:"🏂"},
+  {name:"fencing",icon:"🤺"},
+  {name:"archery",icon:"🏹"},
+  {name:"weightlifting",icon:"🏋️"},
+  {name:"rowing",icon:"🚣"},
+  {name:"climbing",icon:"🧗"},
+  {name:"horse racing",icon:"🏇"},
+  {name:"handball",icon:"🤾"},
+  {name:"diving",icon:"🤿"},
+  {name:"sailing",icon:"⛵"},
+  {name:"skateboarding",icon:"🛹"},
+  {name:"curling",icon:"🥌"},
+  {name:"water polo",icon:"🤽"}
+ ],
+ fruit:[
+  {name:"apple",icon:"🍎"},
+  {name:"banana",icon:"🍌"},
+  {name:"orange",icon:"🍊"},
+  {name:"grapes",icon:"🍇"},
+  {name:"strawberry",icon:"🍓"},
+  {name:"watermelon",icon:"🍉"},
+  {name:"pear",icon:"🍐"},
+  {name:"peach",icon:"🍑"},
+  {name:"cherries",icon:"🍒"},
+  {name:"pineapple",icon:"🍍"},
+  {name:"kiwi",icon:"🥝"},
+  {name:"mango",icon:"🥭"},
+  {name:"lemon",icon:"🍋"},
+  {name:"melon",icon:"🍈"},
+  {name:"blueberries",icon:"🫐"},
+  {name:"coconut",icon:"🥥"},
+  {name:"avocado",icon:"🥑"},
+  {name:"olive",icon:"🫒"}
+ ],
+ transportation:[
+  {name:"car",icon:"🚗"},
+  {name:"taxi",icon:"🚕"},
+  {name:"bus",icon:"🚌"},
+  {name:"trolleybus",icon:"🚎"},
+  {name:"race car",icon:"🏎️"},
+  {name:"police car",icon:"🚓"},
+  {name:"ambulance",icon:"🚑"},
+  {name:"fire engine",icon:"🚒"},
+  {name:"minibus",icon:"🚐"},
+  {name:"truck",icon:"🚚"},
+  {name:"tractor",icon:"🚜"},
+  {name:"motorcycle",icon:"🏍️"},
+  {name:"scooter",icon:"🛵"},
+  {name:"bicycle",icon:"🚲"},
+  {name:"kick scooter",icon:"🛴"},
+  {name:"skateboard",icon:"🛹"},
+  {name:"train",icon:"🚆"},
+  {name:"tram",icon:"🚊"},
+  {name:"monorail",icon:"🚝"},
+  {name:"airplane",icon:"✈️"},
+  {name:"helicopter",icon:"🚁"},
+  {name:"rocket",icon:"🚀"},
+  {name:"satellite",icon:"🛰️"},
+  {name:"sailboat",icon:"⛵"},
+  {name:"speedboat",icon:"🚤"},
+  {name:"ship",icon:"🚢"},
+  {name:"canoe",icon:"🛶"},
+  {name:"ferry",icon:"⛴️"}
+ ],
+ clothes:[
+  {name:"glasses",icon:"👓"},
+  {name:"sunglasses",icon:"🕶️"},
+  {name:"goggles",icon:"🥽"},
+  {name:"lab coat",icon:"🥼"},
+  {name:"safety vest",icon:"🦺"},
+  {name:"necktie",icon:"👔"},
+  {name:"T-shirt",icon:"👕"},
+  {name:"jeans",icon:"👖"},
+  {name:"scarf",icon:"🧣"},
+  {name:"gloves",icon:"🧤"},
+  {name:"coat",icon:"🧥"},
+  {name:"socks",icon:"🧦"},
+  {name:"dress",icon:"👗"},
+  {name:"kimono",icon:"👘"},
+  {name:"sari",icon:"🥻"},
+  {name:"swimsuit",icon:"🩱"},
+  {name:"briefs",icon:"🩲"},
+  {name:"shorts",icon:"🩳"},
+  {name:"bikini",icon:"👙"},
+  {name:"purse",icon:"👛"},
+  {name:"handbag",icon:"👜"},
+  {name:"backpack",icon:"🎒"},
+  {name:"shoe",icon:"👞"},
+  {name:"running shoe",icon:"👟"},
+  {name:"hiking boot",icon:"🥾"},
+  {name:"high heel",icon:"👠"},
+  {name:"sandal",icon:"👡"},
+  {name:"ballet shoes",icon:"🩰"},
+  {name:"boot",icon:"👢"},
+  {name:"crown",icon:"👑"},
+  {name:"hat",icon:"👒"},
+  {name:"top hat",icon:"🎩"},
+  {name:"graduation cap",icon:"🎓"},
+  {name:"cap",icon:"🧢"},
+  {name:"military helmet",icon:"🪖"}
+ ],
+ home:[
+  {name:"chair",icon:"🪑"},
+  {name:"bed",icon:"🛏️"},
+  {name:"couch",icon:"🛋️"},
+  {name:"door",icon:"🚪"},
+  {name:"window",icon:"🪟"},
+  {name:"mirror",icon:"🪞"},
+  {name:"toilet",icon:"🚽"},
+  {name:"bathtub",icon:"🛁"},
+  {name:"shower",icon:"🚿"},
+  {name:"soap",icon:"🧼"},
+  {name:"toothbrush",icon:"🪥"},
+  {name:"razor",icon:"🪒"},
+  {name:"broom",icon:"🧹"},
+  {name:"basket",icon:"🧺"},
+  {name:"bucket",icon:"🪣"},
+  {name:"sponge",icon:"🧽"},
+  {name:"key",icon:"🔑"},
+  {name:"lock",icon:"🔒"},
+  {name:"bell",icon:"🔔"},
+  {name:"clock",icon:"🕰️"},
+  {name:"alarm clock",icon:"⏰"},
+  {name:"television",icon:"📺"},
+  {name:"radio",icon:"📻"},
+  {name:"telephone",icon:"☎️"},
+  {name:"mobile phone",icon:"📱"},
+  {name:"computer",icon:"💻"},
+  {name:"keyboard",icon:"⌨️"},
+  {name:"printer",icon:"🖨️"},
+  {name:"camera",icon:"📷"},
+  {name:"light bulb",icon:"💡"},
+  {name:"flashlight",icon:"🔦"},
+  {name:"candle",icon:"🕯️"},
+  {name:"wastebasket",icon:"🗑️"},
+  {name:"thermometer",icon:"🌡️"},
+  {name:"fire extinguisher",icon:"🧯"}
+ ],
+ plants:[
+  {name:"carrot",icon:"🥕"},
+  {name:"corn",icon:"🌽"},
+  {name:"broccoli",icon:"🥦"},
+  {name:"garlic",icon:"🧄"},
+  {name:"onion",icon:"🧅"},
+  {name:"potato",icon:"🥔"},
+  {name:"tomato",icon:"🍅"},
+  {name:"cucumber",icon:"🥒"},
+  {name:"pepper",icon:"🫑"},
+  {name:"mushroom",icon:"🍄"},
+  {name:"beans",icon:"🫘"},
+  {name:"peanuts",icon:"🥜"},
+  {name:"pea pod",icon:"🫛"},
+  {name:"eggplant",icon:"🍆"},
+  {name:"leafy green",icon:"🥬"},
+  {name:"ginger",icon:"🫚"},
+  {name:"flower",icon:"🌸"},
+  {name:"rose",icon:"🌹"},
+  {name:"sunflower",icon:"🌻"},
+  {name:"tulip",icon:"🌷"},
+  {name:"hibiscus",icon:"🌺"},
+  {name:"lotus",icon:"🪷"},
+  {name:"tree",icon:"🌳"},
+  {name:"palm tree",icon:"🌴"},
+  {name:"cactus",icon:"🌵"},
+  {name:"herb",icon:"🌿"},
+  {name:"clover",icon:"☘️"},
+  {name:"seedling",icon:"🌱"},
+  {name:"fallen leaf",icon:"🍂"},
+  {name:"maple leaf",icon:"🍁"}
+ ],
+ music:[
+  {name:"microphone",icon:"🎤"},
+  {name:"headphones",icon:"🎧"},
+  {name:"radio",icon:"📻"},
+  {name:"saxophone",icon:"🎷"},
+  {name:"accordion",icon:"🪗"},
+  {name:"guitar",icon:"🎸"},
+  {name:"keyboard",icon:"🎹"},
+  {name:"trumpet",icon:"🎺"},
+  {name:"violin",icon:"🎻"},
+  {name:"banjo",icon:"🪕"},
+  {name:"drum",icon:"🥁"},
+  {name:"maracas",icon:"🪇"},
+  {name:"flute",icon:"🪈"},
+  {name:"harp",icon:"🪉"}
+ ],
+ nature:[
+  {name:"sun",icon:"☀️"},
+  {name:"moon",icon:"🌙"},
+  {name:"star",icon:"⭐"},
+  {name:"cloud",icon:"☁️"},
+  {name:"rain",icon:"🌧️"},
+  {name:"snow",icon:"🌨️"},
+  {name:"lightning",icon:"🌩️"},
+  {name:"rainbow",icon:"🌈"},
+  {name:"fire",icon:"🔥"},
+  {name:"volcano",icon:"🌋"},
+  {name:"mountain",icon:"⛰️"},
+  {name:"wave",icon:"🌊"},
+  {name:"tornado",icon:"🌪️"},
+  {name:"snowman",icon:"☃️"},
+  {name:"fog",icon:"🌫️"},
+  {name:"wind",icon:"💨"},
+  {name:"comet",icon:"☄️"},
+  {name:"earth",icon:"🌍"},
+  {name:"desert",icon:"🏜️"},
+  {name:"island",icon:"🏝️"}
+ ]
+};
+const boardSizes={
+ verySmall:{rows:2,cols:2,pairs:2},
+ small:{rows:2,cols:3,pairs:3},
+ medium:{rows:3,cols:4,pairs:6},
+ large:{rows:4,cols:4,pairs:8},
+ veryLarge:{rows:6,cols:4,pairs:12}
+};
+let selectedSize="medium";
+let selectedDifficulty="easy";
+function difficultyPool(pool,difficulty){
+ // Ignore any empty entries, then divide the real emoji vocabulary into 3 groups.
+ const clean=pool.filter(x=>x && x.name && x.icon);
+ const n=clean.length;
+ const cut1=Math.ceil(n/3);
+ const cut2=Math.ceil(2*n/3);
+ if(difficulty==="easy") return clean.slice(0,cut1);
+ if(difficulty==="medium") return clean.slice(cut1,cut2);
+ return clean.slice(cut2);
+}
+function pickSix(pool,difficulty=selectedDifficulty,count=null){
+ const needed=count??boardSizes[selectedSize].pairs;
+ const primary=difficultyPool(pool,difficulty).map(x=>({...x}));
+ let chosen=shuffle(primary).slice(0,needed);
+
+ // If the chosen level does not contain enough objects for the selected table size,
+ // borrow unused emoji objects from the other difficulty levels.
+ if(chosen.length<needed){
+  const used=new Set(chosen.map(x=>x.name));
+  const fallback=pool.filter(x=>x && x.name && x.icon && !used.has(x.name)).map(x=>({...x}));
+  chosen=chosen.concat(shuffle(fallback).slice(0,needed-chosen.length));
+ }
+ return chosen;
+}
+let selectedGenre="animals";
+let animals=pickSix(categories.animals,selectedDifficulty);
+let deck=[],first=null,second=null,locked=false,awaitingName=false,matchedAnimal=null;
+let player=1,numPlayers=2,scores={},recognition=null,running=false,paused=true,gameStarted=false,preferredVoice=null,answerArmed=false,manualVoiceOff=false;
+let masterLayout=null, playerResults=[];
+let playerStartTime=0, playerMismatches=0, playerSuccessfulMatches=0, liveTimerId=null;
+
+const $=id=>document.getElementById(id);
+function shuffle(a){
+ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+ return a;
+}
+function pairsAreSpread(){return true;}
+function makeSpreadDeck(){
+ const base=animals.flatMap((a,i)=>[{...a,pair:i},{...a,pair:i}]);
+ let candidate;
+ for(let tries=0;tries<500;tries++){
+  candidate=shuffle(base.map(x=>({...x})));
+  if(pairsAreSpread(candidate))return candidate;
+ }
+ return candidate;
+}
+function chooseUSVoice(){
+ const vs=speechSynthesis.getVoices();
+ const us=vs.filter(v=>((v.lang||"").replace("_","-").toLowerCase()).startsWith("en-us"));
+ const pref=["Natural","Neural","Premium","Enhanced","Aria","Jenny","Guy","Samantha","Google US English","Microsoft"];
+ return us.find(v=>pref.some(x=>(v.name||"").toLowerCase().includes(x.toLowerCase())))||us[0]||null;
+}
+function refreshVoice(){preferredVoice=chooseUSVoice()} speechSynthesis.onvoiceschanged=refreshVoice;refreshVoice();
+function speak(text,rate=.9){try{speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.lang="en-US";if(!preferredVoice)refreshVoice();if(preferredVoice)u.voice=preferredVoice;u.rate=rate;speechSynthesis.speak(u)}catch(e){}}
+function normalize(s){return s.toLowerCase().replace(/[^\w\s-]/g," ").replace(/\s+/g," ").trim()}
+const numberWords={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,"twenty one":21,"twenty two":22,"twenty three":23,"twenty four":24};
+function parseCard(text){
+ let s=normalize(text),m=s.match(/\b(2[0-4]|1[0-9]|[1-9])\b/); if(m)return +m[1];
+ for(const [w,n] of Object.entries(numberWords).sort((a,b)=>b[0].length-a[0].length))if(new RegExp("\\b"+w+"\\b").test(s))return n;
+ return null;
+}
+function createMasterLayout(){
+ const base=[];
+ animals.forEach((a,i)=>{
+  base.push({pair:i,name:a.name,icon:a.icon});
+  base.push({pair:i,name:a.name,icon:a.icon});
+ });
+ return shuffle(base).map((c,i)=>({...c,id:i+1}));
+}
+function freshDeckFromMaster(){
+ return masterLayout.map(c=>({...c,open:false,matched:false}));
+}
+function buildGame(){
+ scores={};for(let i=1;i<=numPlayers;i++)scores[i]=0;
+ playerResults=[];player=1;
+ masterLayout=createMasterLayout();
+ startPlayerBoard();
+}
+function updateLiveStats(){
+ $("liveTime").textContent=((performance.now()-playerStartTime)/1000).toFixed(1)+" s";
+ $("liveMiss").textContent=playerMismatches;
+ $("liveMatch").textContent=playerSuccessfulMatches;
+}
+function startPlayerBoard(){
+ deck=freshDeckFromMaster();
+ first=second=matchedAnimal=null;awaitingName=false;answerArmed=false;locked=false;
+ scores[player]=0;playerMismatches=0;playerSuccessfulMatches=0;
+ $("pairs").textContent=0;
+ $("pairTotal").textContent=boardSizes[selectedSize].pairs;
+ renderBoard();renderPlayers();
+ voiceOff();
+ playerStartTime=performance.now();
+ if(liveTimerId)clearInterval(liveTimerId);
+ updateLiveStats();
+ liveTimerId=setInterval(updateLiveStats,100);
+ const startText=`Player ${player}, start your game.`;
+ setMessage(startText);
+ speak(startText);
+ setTimeout(()=>{if(gameStarted&&!awaitingName)voiceOn();},1200);
+}
+function renderBoard(){
+ const cfg=boardSizes[selectedSize];
+ $("board").style.gridTemplateColumns=`repeat(${cfg.cols}, minmax(0,1fr))`;
+ $("board").innerHTML=deck.map(c=>`<button class="card ${c.matched?"matched":""}" data-id="${c.id}">${c.matched?`<span class="animal">${c.icon}</span>`:c.id}</button>`).join("");
+ document.querySelectorAll(".card").forEach(b=>b.onclick=()=>chooseCard(+b.dataset.id));
+}
+function reveal(c){let b=document.querySelector(`.card[data-id="${c.id}"]`);b.classList.add("revealed");b.innerHTML=`<span class="animal">${c.icon}</span>`}
+function hide(c){if(c.matched)return;let b=document.querySelector(`.card[data-id="${c.id}"]`);b.classList.remove("revealed");b.innerHTML=c.id}
+function setMessage(x){$("message").textContent=x}
+function chooseCard(n){
+ if(!gameStarted||locked||awaitingName)return;let c=deck[n-1];if(!c||c.matched||c===first)return;
+ reveal(c);speak(c.name); if(!first){first=c;setMessage(`Card ${n} revealed. Choose another card.`);return}
+ second=c;locked=true;
+ if(first.pair===second.pair){matchedAnimal=first;setTimeout(beginNameChallenge,1500)}
+ else{
+  playerMismatches++;updateLiveStats();
+  setMessage("Checking the pair...");
+  setTimeout(()=>{
+   setMessage("Not a match.");
+   speak("Not a match.");
+  },1000);
+  setTimeout(()=>{
+   hide(first);hide(second);first=second=null;locked=false;voiceOn();
+   setMessage(`Player ${player}: voice is ON. Continue your board.`);
+  },2200)
+ }
+}
+const namingPrompts=[
+ "Say the name of the object.",
+ "Please say the name of the object.",
+ "What is this object?",
+ "Can you name this object?",
+ "Tell me the name of this object.",
+ "Say what you see."
+];
+let lastNamingPrompt=-1;
+function randomNamingPrompt(){
+ let i;
+ do{i=Math.floor(Math.random()*namingPrompts.length)}while(namingPrompts.length>1&&i===lastNamingPrompt);
+ lastNamingPrompt=i;
+ return namingPrompts[i];
+}
+function beginNameChallenge(){
+ voiceOff();
+ awaitingName=true;answerArmed=false;locked=true;
+ $("promptAnimal").textContent=matchedAnimal.icon;
+ const prompt=randomNamingPrompt();
+
+ // RED first: vocabulary microphone is OFF while the game gives the instruction.
+ const ab=$("answerBtn");
+ ab.disabled=true;
+ ab.classList.remove("vocabOn");
+ ab.classList.add("vocabOff");
+ ab.textContent="🔴 Voice OFF";
+ $("nameStatus").textContent=prompt;
+ $("namePrompt").style.display="flex";
+ setMessage(prompt);
+ speak(prompt);
+
+ // After the instruction, GREEN: automatically start listening for the object's name.
+ setTimeout(()=>{
+  if(!awaitingName)return;
+  answerArmed=true;
+  ab.classList.remove("vocabOff");
+  ab.classList.add("vocabOn");
+  ab.textContent="🟢 Voice ON — Say the Name";
+  $("nameStatus").textContent="Listening… say the object name.";
+  try{if(running)recognition.stop()}catch(e){}
+  setTimeout(()=>{if(recognition){try{recognition.lang="en-US";recognition.start()}catch(e){}}},180);
+ },1650);
+}
+function editDistance(a,b){
+ const dp=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+ for(let i=0;i<=a.length;i++)dp[i][0]=i;
+ for(let j=0;j<=b.length;j++)dp[0][j]=j;
+ for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)
+  dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+ return dp[a.length][b.length];
+}
+function soundsCloseEnough(word,target){
+ word=normalize(word); target=normalize(target);
+ if(!word||!target)return false;
+ if(word===target || word===target+"s")return true;
+ // Be forgiving with speech recognition / learner pronunciation.
+ const maxDist=target.length>=8?3:target.length>=5?2:1;
+ return editDistance(word,target)<=maxDist;
+}
+function animalAnswerAccepted(text,name){
+ const s=normalize(text);
+ const target=normalize(name);
+ if(!s||!target)return false;
+
+ // Accept the exact object as a whole phrase inside a natural sentence,
+ // including multiword answers such as "table tennis" or "ice cream".
+ const padded=` ${s} `;
+ if(padded.includes(` ${target} `))return true;
+ if(padded.includes(` ${target}s `))return true;
+
+ const words=s.split(" ").filter(Boolean);
+ if(target.endsWith("y") && padded.includes(` ${target.slice(0,-1)}ies `))return true;
+ if((target.endsWith("s")||target.endsWith("x")||target.endsWith("ch")||target.endsWith("sh")) &&
+    padded.includes(` ${target}es `))return true;
+
+ // Near-recognition tolerance for single-word vocabulary.
+ if(!target.includes(" "))return words.some(w=>soundsCloseEnough(w,target));
+ return false;
+}
+function applyNameResult(ok){
+ answerArmed=false;
+ try{if(running)recognition.stop()}catch(e){}
+ paused=true;updateVoiceButton();
+ const ab=$("answerBtn");
+ ab.classList.remove("vocabOn");
+ ab.classList.add("vocabOff");
+ ab.textContent="🔴 Voice OFF";
+
+ if(ok){
+  first.matched=second.matched=true;
+  scores[player]++;
+  playerSuccessfulMatches++;updateLiveStats();
+  $("nameStatus").textContent="Correct";
+  setMessage("Correct! +1 point");
+  speak("Correct");
+  awaitingName=false;
+  renderBoard();renderPlayers();
+  $("pairs").textContent=deck.filter(c=>c.matched).length/2;
+
+  setTimeout(()=>{
+   $("namePrompt").style.display="none";
+   answerArmed=false;
+   first=second=null;
+   if(deck.every(c=>c.matched))finishPlayerGame();
+   else{
+    locked=false;
+    voiceOn();
+    setMessage(`Player ${player}: voice is ON. Choose the next card.`);
+   }
+  },900);
+ }else{
+  playerMismatches++;
+  updateLiveStats();
+  $("nameStatus").textContent="Wrong";
+  setMessage("Wrong — counted as 1 unmatched pair.");
+  speak("Wrong");
+  awaitingName=false;
+  locked=true;
+
+  setTimeout(()=>{
+   $("namePrompt").style.display="none";
+   answerArmed=false;
+   hide(first);hide(second);
+   first=second=null;
+   locked=false;
+   voiceOn();
+   setMessage(`Player ${player}: voice is ON. Continue your board.`);
+  },900);
+ }
+}
+function checkAnimal(text){
+ if(!awaitingName || !matchedAnimal)return;
+ let s=normalize(text),name=matchedAnimal.name;
+ applyNameResult(animalAnswerAccepted(s,name));
+}
+
+function nextPlayer(){player=player%numPlayers+1;$("currentPlayer").textContent=player;renderPlayers();voiceOff();setMessage(`Player ${player}: turn Voice ON when you are ready.`);speak(`Player ${player}, it's your turn.`)}
+function renderPlayers(){$("currentPlayer").textContent=player;$("players").innerHTML=Array.from({length:numPlayers},(_,i)=>i+1).map(p=>`<div class="playerBox ${p===player?"active":""}">Player ${p}</div>`).join("")}
+function finishPlayerGame(){
+ voiceOff();
+ if(liveTimerId){clearInterval(liveTimerId);liveTimerId=null;} updateLiveStats();
+ const elapsed=(performance.now()-playerStartTime)/1000;
+ playerResults.push({
+  player,
+  time:elapsed,
+  mismatches:playerMismatches,
+  matches:playerSuccessfulMatches,
+  score:scores[player]
+ });
+ if(player<numPlayers){
+  const finished=player;
+  player++;
+  setMessage(`Player ${finished} finished! Player ${player} is next.`);
+  speak(`Player ${finished} finished. Player ${player}, get ready.`);
+  setTimeout(()=>startPlayerBoard(),1400);
+ }else{
+  finishGame();
+ }
+}
+function finishGame(){
+ voiceOff();gameStarted=false;
+ const ranked=[...playerResults].sort((a,b)=>a.mismatches-b.mismatches || a.time-b.time);
+ const rows=ranked.map((r,i)=>`<tr>
+  <td>${i+1}</td><td>Player ${r.player}${i===0?" 🏆":""}</td>
+  <td>${r.time.toFixed(1)} s</td><td>${r.mismatches}</td><td>${r.matches}</td>
+ </tr>`).join("");
+ const winner=ranked[0];
+ $("scoreContent").innerHTML=`<h2>🏆 Player ${winner.player} is the Winner!</h2>
+ <p>Ranking is based on the fewest unmatched pairs. If tied, the faster time ranks first.</p>
+ <table class="scoreTable">
+  <thead><tr><th>Rank</th><th>Player</th><th>Time Spent</th><th>Unmatched Pairs</th><th>Successful Matches</th></tr></thead>
+  <tbody>${rows}</tbody></table>`;
+ $("scoreScreen").style.display="flex";
+ speak(`Player ${winner.player} is the winner.`);
+}
+function handleSpeech(text){
+ $("transcript").textContent='Heard: “'+text+'”';
+ if(awaitingName){if(answerArmed)checkAnimal(text);return}
+ let n=parseCard(text);if(n&&n<=deck.length)chooseCard(n);
+}
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){
+ recognition=new SR();recognition.lang="en-US";recognition.continuous=false;recognition.interimResults=true;
+ recognition.onstart=()=>{running=true};
+ recognition.onresult=e=>{
+ let text="";
+ let hasFinal=false;
+ for(let i=e.resultIndex;i<e.results.length;i++){
+  text+=e.results[i][0].transcript+" ";
+  if(e.results[i].isFinal)hasFinal=true;
+ }
+ text=text.trim();
+ // Wait for the final phrase so "twenty four" is not prematurely read as "twenty".
+ if(text&&hasFinal)handleSpeech(text);
+};
+ recognition.onend=()=>{running=false;if(gameStarted&&!paused&&!awaitingName)setTimeout(startRecognition,180)};
+ recognition.onerror=e=>{running=false;$("transcript").textContent="Voice: "+e.error};
+}else{$("transcript").textContent="Speech recognition is not supported in this browser."}
+function updateVoiceButton(){
+ const b=$("voiceToggle"); if(!b)return;
+ b.textContent=paused?"🎤 Voice: OFF":"🎤 Voice: ON";
+ b.classList.toggle("voiceOn",!paused); b.classList.toggle("stop",paused);
+}
+function voiceOff(){
+ paused=true; updateVoiceButton();
+ try{if(recognition&&running)recognition.stop()}catch(e){}
+}
+function voiceOn(){
+ if(!gameStarted||awaitingName||manualVoiceOff)return;
+ paused=false; updateVoiceButton(); startRecognition();
+ setMessage(`Player ${player}: say a card number.`);
+}
+function startRecognition(){if(!recognition||running||paused)return;try{recognition.lang="en-US";recognition.start()}catch(e){}}
+$("answerBtn").onclick=()=>{
+ if(!awaitingName)return;
+ answerArmed=true;
+ $("answerBtn").disabled=true;
+ $("nameStatus").textContent="Listening… say the animal now.";
+ // Restart recognition so this button creates a fresh, deliberate answer window.
+ try{if(running)recognition.stop()}catch(e){}
+ setTimeout(()=>{if(recognition){try{recognition.lang="en-US";recognition.start()}catch(e){}}},220);
+};
+$("voiceToggle").onclick=()=>{
+ if(awaitingName)return;
+ if(paused){
+  manualVoiceOff=false;
+  voiceOn();
+ }else{
+  manualVoiceOff=true;
+  voiceOff();
+  setMessage("Voice is off. Press the Voice button when you are ready.");
+ }
+}
+$("categorySelect").onchange=()=>{
+ selectedGenre=$("categorySelect").value;
+};
+document.querySelectorAll(".difficultyBtn").forEach(btn=>btn.onclick=()=>{
+ selectedDifficulty=btn.dataset.difficulty;
+ document.querySelectorAll(".difficultyBtn").forEach(b=>b.classList.toggle("selectedDifficulty",b===btn));
+});
+document.querySelectorAll(".sizeBtn").forEach(btn=>btn.onclick=()=>{
+ selectedSize=btn.dataset.size;
+ document.querySelectorAll(".sizeBtn").forEach(b=>b.classList.toggle("selectedSize",b===btn));
+});
+$("manualCorrect").onclick=()=>{if(awaitingName&&matchedAnimal)applyNameResult(true)};
+$("manualWrong").onclick=()=>{if(awaitingName&&matchedAnimal)applyNameResult(false)};
+$("startGame").onclick=()=>{
+ numPlayers=Math.max(1,Math.min(10,+$("playerCount").value||2));
+ animals=pickSix(categories[selectedGenre],selectedDifficulty,boardSizes[selectedSize].pairs);
+ $("startScreen").style.display="none";$("app").style.display="block";
+ gameStarted=true;manualVoiceOff=false;paused=true;buildGame();updateVoiceButton();
+ setMessage("Voice is OFF. Get ready to start.");
+}
+$("scoreRestart").onclick=()=>{$("scoreScreen").style.display="none";$("app").style.display="none";$("startScreen").style.display="flex"};
+$("restart").onclick=()=>{gameStarted=false;paused=true;try{recognition.stop()}catch(e){};$("app").style.display="none";$("startScreen").style.display="flex"}
+const tut=[
+ {title:"Practise the object names",demo:"🎯",text:"Push any object name below to hear its American English pronunciation.",main:"",alts:[]},
+ {title:"Choose a card",demo:"5️⃣",text:"Say the number of the card you want to reveal.",main:"Card five",alts:["Five","Number five","Open card five","Choose card five","Show number five"]},
+ {title:"Practise all card numbers",demo:"🔢",text:"Push any number below to hear its American English pronunciation.",main:"One",alts:["One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve"]}
+];let ti=0;
+function refreshCategoryTutorial(){
+ const d=tut[0];
+ const label=selectedGenre==="animals"?"animal":selectedGenre==="fruit"?"fruit":selectedGenre==="food"?"food":selectedGenre==="sports"?"sport":"object";
+ d.title=`Practise the ${label} names`;
+ d.text=`Push any ${label} name below to hear its American English pronunciation and see its picture.`;
+ const items=(Array.isArray(animals)&&animals.length)?animals:(categories[selectedGenre]||categories.animals);
+ d.items=items;
+ d.alts=items.map(a=>a.name);
+ d.main=d.alts[0]||"";
+ d.demo=(items[0]&&items[0].icon)||"🎯";
+ const numberNames=["One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty","Twenty One","Twenty Two","Twenty Three","Twenty Four"];
+ tut[2].alts=numberNames.slice(0,boardSizes[selectedSize].pairs*2);
+}
+function announceTutorialPage(){
+ refreshCategoryTutorial();
+ const d=tut[ti];
+ if(!d)return;
+
+ // Automatically show the same visual as the first spoken item.
+ $("tDemo").classList.remove("tutorialClickedPreview");
+ if(ti===0){
+  const item=(d.items||[]).find(a=>a.name.toLowerCase()===d.main.toLowerCase());
+  if(item){
+   $("tDemo").classList.add("tutorialClickedPreview");
+   $("tDemo").textContent=item.icon;
+  }
+ }else if(ti===2){
+  const words=["one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty one","twenty two","twenty three","twenty four"];
+  const n=words.indexOf(d.main.toLowerCase())+1;
+  if(n>0){
+   $("tDemo").classList.add("tutorialClickedPreview");
+   $("tDemo").innerHTML=`<div class="tutorialNumberPreview">${n}</div>`;
+  }
+ }
+
+ try{speechSynthesis.cancel()}catch(e){}
+ speak(d.main);
+ animateDemo();
+}
+function showTut(){
+ refreshCategoryTutorial();
+ let d=tut[ti];
+ $("tTitle").textContent=d.title;
+ $("tDemo").classList.remove("tutorialClickedPreview");
+ $("tDemo").textContent=d.demo;
+ $("tText").textContent=d.text;
+ $("alts").classList.toggle("tutorialManyItems",d.alts.length>12);
+ $("alts").innerHTML=d.alts.map((x,i)=>`<button class="alt" data-i="${i}">${x}</button>`).join("");
+ document.querySelectorAll(".alt").forEach(b=>b.onclick=()=>{
+  const phrase=d.alts[+b.dataset.i];
+  speak(phrase);
+
+  if(ti===0){
+   const item=(d.items||[]).find(a=>a.name.toLowerCase()===phrase.toLowerCase());
+   if(item){
+    $("tDemo").classList.add("tutorialClickedPreview");
+    $("tDemo").textContent=item.icon;
+   }
+  }else if(ti===2){
+   const words=["one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty one","twenty two","twenty three","twenty four"];
+   const n=words.indexOf(phrase.toLowerCase())+1;
+   if(n>0){
+    $("tDemo").classList.add("tutorialClickedPreview");
+    $("tDemo").innerHTML=`<div class="tutorialNumberPreview">${n}</div>`;
+   }
+  }
+  animateDemo();
+ });
+}
+function animateDemo(){$("tDemo").animate([{transform:"scale(1)"},{transform:"scale(1.12)"},{transform:"scale(1)"}],{duration:650})}
+$("tutorialBtn").onclick=()=>{
+ // Tutorial always turns the game microphone OFF.
+ try{recognition&&recognition.stop()}catch(e){}
+ paused=true;
+ updateVoiceButton();
+ $("tutorial").style.display="flex";
+ ti=0;showTut();announceTutorialPage();
+}
+$("closeTut").onclick=()=>{
+ $("tutorial").style.display="none";
+ // Returning to an active game automatically turns the microphone ON.
+ if(gameStarted&&!awaitingName){
+  setTimeout(()=>voiceOn(),300);
+ }
+}
+$("hearShow").onclick=()=>{
+ const d=tut[ti];
+ speak(d.main);
+ if(ti===0){
+  const item=(d.items||[]).find(a=>a.name.toLowerCase()===d.main.toLowerCase());
+  if(item){$("tDemo").classList.add("tutorialClickedPreview");$("tDemo").textContent=item.icon;}
+ }
+ animateDemo();
+}
+$("prevT").onclick=()=>{ti=(ti+tut.length-1)%tut.length;showTut();announceTutorialPage()}
+$("nextT").onclick=()=>{ti=(ti+1)%tut.length;showTut();announceTutorialPage()}
+showTut();
+</script>
+</body>
+</html>
