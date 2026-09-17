@@ -455,6 +455,259 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
  font-size:clamp(19px,5.8vw,23px)!important;
 }
 
+
+/* Force the complete title to fit on one line on narrow screens */
+#startScreen h1{
+ display:block!important;
+ width:100%!important;
+ max-width:100%!important;
+ box-sizing:border-box!important;
+ white-space:nowrap!important;
+ overflow:visible!important;
+ font-size:clamp(15px,5vw,21px)!important;
+ line-height:1.05!important;
+ letter-spacing:-0.4px!important;
+ margin-left:auto!important;
+ margin-right:auto!important;
+}
+@media (max-width:380px){
+ #startScreen h1{
+  font-size:15px!important;
+  letter-spacing:-0.6px!important;
+ }
+}
+
+
+/* Main setup title: one line and same heading color as Category/Difficulty */
+#startScreen h1{
+ display:flex!important;
+ flex-wrap:nowrap!important;
+ align-items:center!important;
+ justify-content:center!important;
+ gap:4px!important;
+ width:100%!important;
+ max-width:none!important;
+ white-space:nowrap!important;
+ word-break:keep-all!important;
+ overflow-wrap:normal!important;
+ hyphens:none!important;
+ color:#344054!important;
+ font-size:clamp(13px,4.35vw,20px)!important;
+ line-height:1!important;
+ letter-spacing:-0.45px!important;
+ padding:0!important;
+ margin:2px 0 6px!important;
+}
+#startScreen h1 *{
+ white-space:nowrap!important;
+ word-break:keep-all!important;
+ overflow-wrap:normal!important;
+ color:#344054!important;
+}
+@media (max-width:360px){
+ #startScreen h1{
+  font-size:13px!important;
+  letter-spacing:-0.65px!important;
+  gap:2px!important;
+ }
+}
+
+
+/* Correct setup title element */
+#startScreen .big{
+ display:block!important;
+ width:100%!important;
+ max-width:100%!important;
+ box-sizing:border-box!important;
+ white-space:nowrap!important;
+ word-break:keep-all!important;
+ overflow-wrap:normal!important;
+ hyphens:none!important;
+ text-align:center!important;
+ color:#344054!important;
+ font-size:clamp(15px,4.6vw,21px)!important;
+ line-height:1.05!important;
+ letter-spacing:-0.45px!important;
+ margin:2px 0 6px!important;
+}
+@media (max-width:360px){
+ #startScreen .big{
+  font-size:14px!important;
+  letter-spacing:-0.65px!important;
+ }
+}
+
+
+/* Refined main title */
+#startScreen .big{
+ color:#3f66e8!important;
+ font-size:clamp(13px,4.1vw,18px)!important;
+ font-weight:800!important;
+ white-space:nowrap!important;
+ letter-spacing:-0.25px!important;
+}
+@media (max-width:360px){
+ #startScreen .big{
+  font-size:13px!important;
+ }
+}
+
+
+/* Larger main title while keeping it on one line */
+#startScreen .big{
+ color:#3f66e8!important;
+ font-size:clamp(17px,5.4vw,23px)!important;
+ font-weight:800!important;
+ white-space:nowrap!important;
+ letter-spacing:-0.45px!important;
+}
+@media (max-width:360px){
+ #startScreen .big{
+  font-size:16px!important;
+  letter-spacing:-0.65px!important;
+ }
+}
+
+
+/* Slightly larger first-page UI */
+#startScreen .startCard{padding:12px 16px 10px!important}
+#startScreen h2{font-size:14.8px!important;margin:5px 0 3px!important}
+#startScreen label{font-size:14px!important}
+
+#startScreen #playerCount,
+#startScreen #categorySelect{
+ height:33px!important;min-height:33px!important;
+ padding:3px 9px!important;font-size:14.2px!important;
+}
+
+#startScreen .difficultyBtn,
+#startScreen .sizeBtn{
+ min-height:33px!important;
+ padding:5px 6px!important;
+ font-size:13.2px!important;
+}
+
+#startScreen #startGame{
+ min-height:38px!important;
+ padding:7px 14px!important;
+ font-size:15.3px!important;
+}
+
+#startScreen #otherSettingsBtn{
+ height:35px!important;min-height:35px!important;
+ font-size:14.2px!important;
+}
+
+#startScreen #otherSettingsPanel h2{font-size:13.8px!important}
+#startScreen #startingNumber,
+#startScreen #gameMode{
+ height:33px!important;min-height:33px!important;
+ font-size:13.8px!important;
+}
+
+#startScreen .creatorCredit{
+ font-size:12.2px!important;
+}
+#startScreen .creatorCredit span{font-size:11.2px!important}
+
+/* Title: increased more than the other elements and changed to red */
+#startScreen .big{
+ color:#e53935!important;
+ font-size:clamp(20px,6.2vw,27px)!important;
+ font-weight:800!important;
+ white-space:nowrap!important;
+ letter-spacing:-0.65px!important;
+}
+@media (max-width:360px){
+ #startScreen .big{
+  font-size:18px!important;
+  letter-spacing:-0.8px!important;
+ }
+}
+
+
+/* First page: one more gentle size increase */
+#startScreen .startCard{padding:13px 17px 11px!important}
+#startScreen h2{font-size:15.5px!important;margin:6px 0 3px!important}
+#startScreen label{font-size:14.7px!important}
+
+#startScreen #playerCount,
+#startScreen #categorySelect{
+ height:35px!important;min-height:35px!important;
+ padding:4px 10px!important;font-size:14.9px!important;
+}
+
+#startScreen .difficultyBtn,
+#startScreen .sizeBtn{
+ min-height:35px!important;
+ padding:6px 7px!important;
+ font-size:13.8px!important;
+}
+
+#startScreen #startGame{
+ min-height:40px!important;
+ padding:8px 15px!important;
+ font-size:16px!important;
+}
+
+#startScreen #otherSettingsBtn{
+ height:37px!important;min-height:37px!important;
+ font-size:14.9px!important;
+}
+
+#startScreen #otherSettingsPanel h2{font-size:14.5px!important}
+#startScreen #startingNumber,
+#startScreen #gameMode{
+ height:35px!important;min-height:35px!important;
+ font-size:14.5px!important;
+}
+
+#startScreen .creatorCredit{font-size:12.8px!important}
+#startScreen .creatorCredit span{font-size:11.8px!important}
+
+/* Warm purple title — distinct from blue, white, and black */
+#startScreen .big{
+ color:#8e44ad!important;
+ font-size:clamp(21px,6.3vw,28px)!important;
+ font-weight:800!important;
+ white-space:nowrap!important;
+ letter-spacing:-0.7px!important;
+}
+@media (max-width:360px){
+ #startScreen .big{
+  font-size:18.5px!important;
+  letter-spacing:-0.85px!important;
+ }
+}
+
+
+/* Light title color for clear contrast against the purple background */
+#startScreen .big{
+ color:#fff3a6!important;
+}
+
+
+/* Dark green title */
+#startScreen .big{
+ color:#1f6b3a!important;
+}
+
+
+/* Strong black title, slightly larger */
+#startScreen .big{
+ color:#000000!important;
+ font-size:clamp(22px,6.6vw,29px)!important;
+ font-weight:900!important;
+ white-space:nowrap!important;
+ letter-spacing:-0.75px!important;
+}
+@media (max-width:360px){
+ #startScreen .big{
+  font-size:19px!important;
+  letter-spacing:-0.9px!important;
+ }
+}
+
 </style>
 </head>
 <body>
@@ -507,7 +760,7 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
    <button type="button" id="otherSettingsBtn">Other Settings ▾</button>
    <div id="otherSettingsPanel">
     <h2>Starting Number</h2>
-    <input id="startingNumber" class="setupSelect" type="number" value="20" min="1" step="1"
+    <input id="startingNumber" class="setupSelect" type="number" value="21" min="1" step="1"
      inputmode="numeric" aria-label="Starting card number" style="box-sizing:border-box;margin-bottom:10px">
     <h2>Mode</h2>
     <select id="gameMode" class="setupSelect" aria-label="Game mode" style="box-sizing:border-box;margin-bottom:8px">
@@ -962,7 +1215,7 @@ let selectedGenre="animals";
 let animals=pickSix(categories.animals,selectedDifficulty);
 let deck=[],first=null,second=null,locked=false,awaitingName=false,matchedAnimal=null;
 let player=1,numPlayers=2,scores={},recognition=null,running=false,paused=true,gameStarted=false,preferredVoice=null,answerArmed=false,manualVoiceOff=false;
-let startingNumber=20;
+let startingNumber=21;
 let gameMode="practice";
 let masterLayout=null, playerResults=[];
 let playerStartTime=0, playerMismatches=0, playerSuccessfulMatches=0, liveTimerId=null;
@@ -1034,7 +1287,7 @@ function numberToWords(n){
 function titleNumber(n){return numberToWords(n).replace(/\b\w/g,c=>c.toUpperCase())}
 function readStartingNumber(){
  let n=parseInt($("startingNumber").value,10);
- if(!Number.isFinite(n))n=20;
+ if(!Number.isFinite(n))n=21;
  n=Math.max(1,Math.min(9976,n)); // +23 keeps the largest board at or below 9999
  $("startingNumber").value=n;
  return n;
