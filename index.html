@@ -303,7 +303,6 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
   <div class="badge">Tutorial</div><h2 id="tTitle">Choose a card</h2>
   <div id="tDemo" class="demo">5️⃣</div>
   <p id="tText">Say the number of the card you want to reveal.</p>
-  <button id="hearShow" class="primary">🔊▶ Hear & Show Action</button>
   <div style="margin-top:12px"><b>You can also say:</b><div id="alts"></div></div>
   <div style="margin-top:14px"><button id="prevT" class="secondary">← Previous</button> <button id="nextT" class="secondary">Next →</button></div>
  </div>
@@ -1179,7 +1178,7 @@ $("closeTut").onclick=()=>{
   setTimeout(()=>voiceOn(),300);
  }
 }
-$("hearShow").onclick=()=>{
+if($("hearShow")) $("hearShow").onclick=()=>{
  const d=tut[ti];
  speak(d.main);
  if(ti===0){
