@@ -736,31 +736,11 @@ function speak(text,rate=.9,onEnd=null){
  }catch(e){if(onEnd)setTimeout(onEnd,250)}
 }
 function normalize(s){return s.toLowerCase().replace(/[^\w\s-]/g," ").replace(/\s+/g," ").trim()}
-const numberWords={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,"twenty one":21,"twenty two":22,"twenty three":23,"twenty four":24};
+const numberWords={eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,"twenty one":21,"twenty two":22,"twenty three":23,"twenty four":24,"twenty five":25,"twenty six":26,"twenty seven":27,"twenty eight":28,"twenty nine":29,thirty:30,"thirty one":31,"thirty two":32,"thirty three":33,"thirty four":34};
 function parseCard(text){
- let s=normalize(text),m=s.match(/\b(2[0-4]|1[0-9]|[1-9])\b/); if(m)return +m[1];
-
- // Exact number words first, longest first.
+ let s=normalize(text),m=s.match(/\b(3[0-4]|2[0-9]|1[1-9])\b/); if(m)return +m[1];
  for(const [w,n] of Object.entries(numberWords).sort((a,b)=>b[0].length-a[0].length))
   if(new RegExp("\\b"+w+"\\b").test(s))return n;
-
- // Common speech-recognition confusions for very short one-digit number words.
- // These are intentionally conservative and are used only while choosing cards.
- const shortNumberAliases={
-  1:["won"],
-  2:["to","too"],
-  3:["tree"],
-  4:["for","fore"],
-  5:["fife"],
-  6:["sicks"],
-  7:["sevin"],
-  8:["ate"],
-  9:["niner"]
- };
- const words=s.split(" ").filter(Boolean);
- for(const [n,aliases] of Object.entries(shortNumberAliases))
-  if(aliases.some(a=>words.includes(a)))return +n;
-
  return null;
 }
 function createMasterLayout(){
@@ -769,7 +749,7 @@ function createMasterLayout(){
   base.push({pair:i,name:a.name,icon:a.icon});
   base.push({pair:i,name:a.name,icon:a.icon});
  });
- return shuffle(base).map((c,i)=>({...c,id:i+1}));
+ return shuffle(base).map((c,i)=>({...c,id:i+11}));
 }
 function freshDeckFromMaster(){
  return masterLayout.map(c=>({...c,open:false,matched:false}));
@@ -812,7 +792,7 @@ function reveal(c){let b=document.querySelector(`.card[data-id="${c.id}"]`);b.cl
 function hide(c){if(c.matched)return;let b=document.querySelector(`.card[data-id="${c.id}"]`);b.classList.remove("revealed");b.innerHTML=c.id}
 function setMessage(x){$("message").textContent=x}
 function chooseCard(n){
- if(!gameStarted||locked||awaitingName)return;let c=deck[n-1];if(!c||c.matched||c===first)return;
+ if(!gameStarted||locked||awaitingName)return;let c=deck[n-11];if(!c||c.matched||c===first)return;
  reveal(c);speak(c.name); if(!first){first=c;setMessage(`Card ${n} revealed. Choose another card.`);return}
  second=c;locked=true;
  if(first.pair===second.pair){matchedAnimal=first;setTimeout(beginNameChallenge,1500)}
@@ -1032,7 +1012,7 @@ function handleSpeech(text){
  $("transcript").textContent='Heard: “'+text+'”';
  if(awaitingName){if(answerArmed)checkAnimal(text);return}
  let n=parseCard(text);
- if(n&&n<=deck.length){
+ if(n&&n>=11&&n<=10+deck.length){
   clearTimeout(cardRetryTimer);
   chooseCard(n);
  }else if(!paused&&gameStarted&&!awaitingName){
@@ -1125,8 +1105,8 @@ $("scoreRestart").onclick=()=>{$("scoreScreen").style.display="none";$("app").st
 $("restart").onclick=()=>{gameStarted=false;paused=true;try{recognition.stop()}catch(e){};$("app").style.display="none";$("startScreen").style.display="flex"}
 const tut=[
  {title:"Practise the object names",demo:"🎯",text:"Push any object name below to hear its American English pronunciation.",main:"",alts:[]},
- {title:"Choose a card",demo:"5️⃣",text:"Say the number of the card you want to reveal.",main:"Card five",alts:["Five","Number five","Open card five","Choose card five","Show number five"]},
- {title:"Practise all card numbers",demo:"🔢",text:"Push any number below to hear its American English pronunciation.",main:"One",alts:["One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve"]}
+ {title:"Choose a card",demo:"1️⃣1️⃣",text:"Say the number of the card you want to reveal.",main:"Card eleven",alts:["Eleven","Number eleven","Open card eleven","Choose card eleven","Show number eleven"]},
+ {title:"Practise all card numbers",demo:"🔢",text:"Push any number below to hear its American English pronunciation.",main:"Eleven",alts:["Eleven","Twelve","Thirteen","Fourteen"]}
 ];let ti=0;
 function refreshCategoryTutorial(){
  const d=tut[0];
@@ -1138,8 +1118,9 @@ function refreshCategoryTutorial(){
  d.alts=items.map(a=>a.name);
  d.main=d.alts[0]||"";
  d.demo=(items[0]&&items[0].icon)||"🎯";
- const numberNames=["One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty","Twenty One","Twenty Two","Twenty Three","Twenty Four"];
+ const numberNames=["Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen","Twenty","Twenty One","Twenty Two","Twenty Three","Twenty Four","Twenty Five","Twenty Six","Twenty Seven","Twenty Eight","Twenty Nine","Thirty","Thirty One","Thirty Two","Thirty Three","Thirty Four"];
  tut[2].alts=numberNames.slice(0,boardSizes[selectedSize].pairs*2);
+ tut[2].main=tut[2].alts[0]||"Eleven";
 }
 function announceTutorialPage(){
  refreshCategoryTutorial();
@@ -1155,9 +1136,9 @@ function announceTutorialPage(){
    $("tDemo").textContent=item.icon;
   }
  }else if(ti===2){
-  const words=["one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty one","twenty two","twenty three","twenty four"];
-  const n=words.indexOf(d.main.toLowerCase())+1;
-  if(n>0){
+  const words=["eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty one","twenty two","twenty three","twenty four","twenty five","twenty six","twenty seven","twenty eight","twenty nine","thirty","thirty one","thirty two","thirty three","thirty four"];
+  const n=words.indexOf(d.main.toLowerCase())+11;
+  if(n>=11){
    $("tDemo").classList.add("tutorialClickedPreview");
    $("tDemo").innerHTML=`<div class="tutorialNumberPreview">${n}</div>`;
   }
@@ -1191,9 +1172,9 @@ function showTut(){
     $("tDemo").textContent=item.icon;
    }
   }else if(ti===2){
-   const words=["one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty one","twenty two","twenty three","twenty four"];
-   const n=words.indexOf(phrase.toLowerCase())+1;
-   if(n>0){
+   const words=["eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty","twenty one","twenty two","twenty three","twenty four","twenty five","twenty six","twenty seven","twenty eight","twenty nine","thirty","thirty one","thirty two","thirty three","thirty four"];
+   const n=words.indexOf(phrase.toLowerCase())+11;
+   if(n>=11){
     $("tDemo").classList.add("tutorialClickedPreview");
     $("tDemo").innerHTML=`<div class="tutorialNumberPreview">${n}</div>`;
    }
