@@ -1139,6 +1139,8 @@ function showTut(){
  $("tText").textContent=d.text;
  $("alts").classList.toggle("tutorialManyItems",d.alts.length>12);
  $("alts").innerHTML=d.alts.map((x,i)=>`<button class="alt" data-i="${i}">${x}</button>`).join("");
+ const firstTutorialItem=document.querySelector("#alts .alt");
+ if(firstTutorialItem)firstTutorialItem.classList.add("tutorialSelected");
  document.querySelectorAll(".alt").forEach(b=>b.onclick=()=>{
    document.querySelectorAll("#alts .alt").forEach(x=>x.classList.remove("tutorialSelected"));
    b.classList.add("tutorialSelected");
