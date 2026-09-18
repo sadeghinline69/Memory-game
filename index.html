@@ -743,6 +743,27 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
  pointer-events:none;
  user-select:none;
 }
+
+/* Requested score-number emphasis */
+.scoreNumberRed{color:#d60000 !important;font-size:1.15em !important;font-weight:900}
+
+/* Online/local player emphasis + online two-column scoreboard */
+#players .playerBox{font-size:17px;padding:8px 13px;font-weight:900}
+#players .playerBox.active{border-color:#f28c18;background:#fff1df;color:#9a4b00}
+#players .playerBox.active::before{content:"";display:inline-block;width:23px;height:23px;background:#f28c18;border-radius:4px;margin-right:9px;vertical-align:-6px;box-sizing:border-box;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+#players .playerBox.active::after{content:"";display:inline-block;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #fff;margin-left:-25px;margin-right:12px;vertical-align:-1px;position:relative;left:1px}
+#liveStats.onlineScoreGrid{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;width:min(560px,100%);margin:7px auto !important}
+#liveStats.onlineScoreGrid .onlineScorePlayer{display:flex;align-items:center;gap:9px;background:white;border-radius:14px;padding:9px 11px;box-shadow:0 3px 14px #18366b18;min-width:0}
+#liveStats.onlineScoreGrid .onlineScorePlayer.odd{grid-column:1}
+#liveStats.onlineScoreGrid .onlineScorePlayer.even{grid-column:2}
+#liveStats.onlineScoreGrid .onlineScorePlayer .turnSquare{width:25px;height:25px;border-radius:4px;background:transparent;border:2px solid transparent;flex:0 0 25px;position:relative;box-sizing:border-box}
+#liveStats.onlineScoreGrid .onlineScorePlayer.active .turnSquare{background:#f28c18;border-color:#f28c18}
+#liveStats.onlineScoreGrid .onlineScorePlayer.active .turnSquare::after{content:"";position:absolute;left:8px;top:5px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #fff}
+#liveStats.onlineScoreGrid .onlineScoreText{min-width:0;text-align:left;line-height:1.2}
+#liveStats.onlineScoreGrid .onlineScoreName{font-size:15px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#liveStats.onlineScoreGrid .onlineScoreMatches{font-size:13px;font-weight:800;margin-top:3px}
+#liveStats.onlineScoreGrid .onlineScoreTime{font-size:12px;font-weight:800;color:#506078;margin-top:3px}
+@media(max-width:380px){#players .playerBox{font-size:15px;padding:7px 10px}#liveStats.onlineScoreGrid{gap:7px}#liveStats.onlineScoreGrid .onlineScorePlayer{padding:8px 7px;gap:6px}#liveStats.onlineScoreGrid .onlineScorePlayer .turnSquare{width:22px;height:22px;flex-basis:22px}.onlineScoreName{font-size:14px !important}}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -853,7 +874,7 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
  <div id="message">Say a card number to reveal a card.</div>
 <div id="liveStats" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:6px 0">
  <span class="pill">⏱️ Time: <b id="liveTime">0.0 s</b></span>
- <span class="pill">❌ Unmatched: <b id="liveMiss">0</b></span>
+ <span class="pill">❌ Unmatched: <b id="liveMiss" class="scoreNumberRed">0</b></span>
  <span class="pill">✅ Matches: <b id="liveMatch">0</b></span>
 </div>
  <div id="board"></div>
@@ -1633,13 +1654,21 @@ function renderOnlineLiveScoreboard(){
  if(!onlineMode)return;
  const box=$("liveStats");
  if(!box)return;
- box.innerHTML=onlineRoster.map((p,i)=>`<span class="pill">${i+1===player?"▶️ ":""}${p.name}: <b>${scores[i+1]||0}</b> matches · ⏱️ <b>${formatOnlineTime(onlineElapsedFor(i+1))}</b></span>`).join("");
+ box.classList.add("onlineScoreGrid");
+ box.innerHTML=onlineRoster.map((p,i)=>{
+  const n=i+1;
+  return `<div class="onlineScorePlayer ${n%2?"odd":"even"} ${n===player?"active":""}" style="grid-row:${Math.ceil(n/2)}">`+
+   `<span class="turnSquare" aria-hidden="true"></span>`+
+   `<div class="onlineScoreText"><div class="onlineScoreName">${escapeHtml(p.name)}</div>`+
+   `<div class="onlineScoreMatches">✅ Matches: <b class="scoreNumberRed">${scores[n]||0}</b></div>`+
+   `<div class="onlineScoreTime">⏱️ Time: <b>${formatOnlineTime(onlineElapsedFor(n))}</b></div></div></div>`;
+ }).join("");
 }
 function displayOnlineFinalScoreboard(){
  voiceOff();gameStarted=false;
  if(onlineHost&&onlineTurnStartedAt)commitOnlineTurnTime(player);
  const ranked=onlineRoster.map((p,i)=>({name:p.name,score:scores[i+1]||0,time:onlineElapsedFor(i+1)})).sort((a,b)=>b.score-a.score || a.time-b.time);
- const rows=ranked.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}${i===0?" 🏆":""}</td><td>${r.score}</td><td>${formatOnlineTime(r.time)}</td></tr>`).join("");
+ const rows=ranked.map((r,i)=>`<tr><td>${i+1}</td><td>${r.name}${i===0?" 🏆":""}</td><td><span class="scoreNumberRed">${r.score}</span></td><td>${formatOnlineTime(r.time)}</td></tr>`).join("");
  $("scoreContent").innerHTML=`<h2>🏆 Online Scoreboard</h2><p>Highest correct matches wins. If tied, the player with less total playing time wins.</p><table class="scoreTable"><thead><tr><th>Rank</th><th>Player</th><th>Correct Matches</th><th>Total Time</th></tr></thead><tbody>${rows}</tbody></table>`;
  $("scoreScreen").style.display="flex";
 }
@@ -1652,7 +1681,7 @@ function finishGame(){
  const ranked=[...playerResults].sort((a,b)=>a.mismatches-b.mismatches || a.time-b.time);
  const rows=ranked.map((r,i)=>`<tr>
   <td>${i+1}</td><td>Player ${r.player}${i===0?" 🏆":""}</td>
-  <td>${r.time.toFixed(1)} s</td><td>${r.mismatches}</td><td>${r.matches}</td>
+  <td>${r.time.toFixed(1)} s</td><td><span class="scoreNumberRed">${r.mismatches}</span></td><td>${r.matches}</td>
  </tr>`).join("");
  const winner=ranked[0];
  $("scoreContent").innerHTML=`<h2>🏆 Player ${winner.player} is the Winner!</h2>
@@ -2052,7 +2081,7 @@ function updateRosterUI(){
  const box=$("onlinePlayers");
  if(onlineRoster.length){
   const heading=`${onlineRoster.length} player${onlineRoster.length===1?"":"s"} in the room`;
-  const rows=onlineRoster.map((p,i)=>`<div style="padding:3px 0;font-weight:800">Player ${i+1}: ${escapeHtml(p.name)}</div>`).join("");
+  const rows=onlineRoster.map((p,i)=>`<div style="padding:3px 0;font-weight:800">${escapeHtml(p.name)}</div>`).join("");
   box.innerHTML=`<div style="font-weight:900;margin-bottom:3px">${heading}</div>${rows}`;
  }else{box.textContent="Waiting for players…";}
  if(onlineMode && gameStarted){
@@ -2246,7 +2275,7 @@ function updatePlayTypeButtons(){
  onlineBtn.style.background=onlineMode?"#23a55a":"white";
  onlineBtn.style.color=onlineMode?"white":"";
 }
-$("localPlayBtn").onclick=()=>{onlineMode=false;updatePlayTypeButtons();$("startScreen").classList.remove("onlineSetup");$("onlineLobby").style.display="none";$("playerCountWrap").style.display="";$("startGame").style.display="block";$("liveStats").innerHTML='<span class="pill">⏱️ Time: <b id="liveTime">0.0 s</b></span><span class="pill">❌ Unmatched: <b id="liveMiss">0</b></span><span class="pill">✅ Matches: <b id="liveMatch">0</b></span>'};
+$("localPlayBtn").onclick=()=>{onlineMode=false;updatePlayTypeButtons();$("startScreen").classList.remove("onlineSetup");$("onlineLobby").style.display="none";$("playerCountWrap").style.display="";$("startGame").style.display="block";$("liveStats").classList.remove("onlineScoreGrid");$("liveStats").innerHTML='<span class="pill">⏱️ Time: <b id="liveTime">0.0 s</b></span><span class="pill">❌ Unmatched: <b id="liveMiss" class="scoreNumberRed">0</b></span><span class="pill">✅ Matches: <b id="liveMatch">0</b></span>'};
 $("onlinePlayBtn").onclick=()=>{onlineMode=true;updatePlayTypeButtons();$("startScreen").classList.add("onlineSetup");$("onlineLobby").style.display="block";$("playerCountWrap").style.display="none";$("startGame").style.display="none"};
 updatePlayTypeButtons();
 $("showJoinBtn").onclick=()=>{$("joinFields").style.display="block"};
@@ -2344,4 +2373,22 @@ setInterval(()=>{if(onlineMode&&gameStarted)renderOnlineLiveScoreboard();},250);
 </script>
 
 </body>
-</html>
+</html><style>
+/* V119: keep surrounding player boxes, remove only the play-button icon */
+#players .playerBox{
+  font-size:15px;
+  padding:6px 10px;
+  font-weight:850;
+  background:#fff;
+  border:2px solid transparent;
+  border-radius:14px;
+}
+#players .playerBox.active{
+  border-color:#f28c18;
+  background:#fff1df;
+  color:#9a4b00;
+}
+#players .playerBox.active::before,
+#players .playerBox.active::after{content:none;display:none}
+@media(max-width:380px){#players .playerBox{font-size:14px;padding:5px 8px}}
+</style>
