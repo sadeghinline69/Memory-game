@@ -764,6 +764,22 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
 #liveStats.onlineScoreGrid .onlineScoreMatches{font-size:13px;font-weight:800;margin-top:3px}
 #liveStats.onlineScoreGrid .onlineScoreTime{font-size:12px;font-weight:800;color:#506078;margin-top:3px}
 @media(max-width:380px){#players .playerBox{font-size:15px;padding:7px 10px}#liveStats.onlineScoreGrid{gap:7px}#liveStats.onlineScoreGrid .onlineScorePlayer{padding:8px 7px;gap:6px}#liveStats.onlineScoreGrid .onlineScorePlayer .turnSquare{width:22px;height:22px;flex-basis:22px}.onlineScoreName{font-size:14px !important}}
+
+/* Tutorial mini-game demo */
+.tutorialMiniBoard{display:grid;grid-template-columns:repeat(2,82px);gap:10px;justify-content:center;margin:12px auto}
+.tutorialMiniCard{width:82px;height:82px;border:0;border-radius:15px;background:#3157d5;color:#fff;font-size:34px;font-weight:900;box-shadow:0 4px 0 #18348f;display:flex;align-items:center;justify-content:center}
+.tutorialMiniCard.face{background:#fff;color:#111;border:3px solid #3157d5;box-shadow:none;font-size:48px}
+.tutorialMiniCard.matched{background:#e9ffe9;border-color:#21a447}
+.tutorialMiniHint{font-size:14px;font-weight:800;line-height:1.35;margin:7px auto;max-width:500px}
+@media(max-width:420px){.tutorialMiniBoard{grid-template-columns:repeat(2,74px)}.tutorialMiniCard{width:74px;height:74px}}
+
+#tutorialMiniChallenge{max-width:310px;margin:10px auto;padding:12px 14px;background:#fff;border:2px solid #3157d5;border-radius:16px;box-shadow:0 5px 18px #18366b26;text-align:center}
+#tutorialMiniChallenge .challengeTitle{font-size:14px;font-weight:900;margin-bottom:7px}
+#tutorialMiniChallenge .challengeWord{font-size:24px;font-weight:900;color:#3157d5;margin:4px 0 9px}
+#tutorialMiniChallenge .teacherBtns{display:flex;justify-content:center;gap:12px}
+#tutorialMiniChallenge .teacherBtns button{width:48px;height:38px;border:0;border-radius:10px;color:#fff;font-size:22px;font-weight:900}
+#tutorialMiniChallenge .teacherBtns .yes{background:#24a148}
+#tutorialMiniChallenge .teacherBtns .no{background:#d93025}
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -781,6 +797,9 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
 <div id="startScreen" class="screen">
  <div class="startCard">
   <div class="big">🐾 English Memory Match</div>
+<div class="gameKidIntro" style="max-width:520px;margin:7px auto 10px;text-align:center;font-weight:800;font-size:14px;line-height:1.35">
+  Find two matching pictures! 🧩
+</div>
   <div id="playTypeBox" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px">
    <button type="button" id="localPlayBtn" class="primary" style="background:#23a55a">📱 Local Game</button>
    <button type="button" id="onlinePlayBtn" class="secondary">🌐 Online Game</button>
@@ -913,6 +932,20 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
   <button id="closeTut" class="secondary">✕ Close</button>
   <div class="badge">Tutorial</div><h2 id="tTitle">Choose a card</h2>
   <div id="tDemo" class="demo">5️⃣</div>
+  <div id="tutorialMiniGame" style="display:none">
+    <div class="tutorialMiniHint">Watch and listen: say a number to open a card. Find the same picture, then say its English name.</div>
+    <div id="tutorialMiniBoard" class="tutorialMiniBoard"></div>
+    <div id="tutorialMiniChallenge" class="nameChallenge" style="display:none">
+      <div class="challengeTitle">🎤 Say the name of the matching picture</div>
+      
+      <div class="teacherBtns">
+        <button type="button" class="yes">✓</button>
+        <button type="button" class="no">✕</button>
+      </div>
+    </div>
+    <div id="tutorialMiniStatus" class="tutorialMiniHint">The example will play automatically.</div>
+    <button id="replayMiniDemo" class="secondary" type="button">▶ Replay</button>
+  </div>
   <p id="tText">Say the number of the card you want to reveal.</p>
   <div style="margin-top:12px"><b>You can also say:</b><div id="alts"></div></div>
   <div style="margin-top:14px"><button id="prevT" class="secondary">← Previous</button> <button id="nextT" class="secondary">Next →</button></div>
@@ -1892,12 +1925,14 @@ $("startGame").onclick=()=>{
 $("scoreRestart").onclick=()=>{$("scoreScreen").style.display="none";$("app").style.display="none";$("startScreen").style.display="flex"};
 $("restart").onclick=()=>{gameStarted=false;paused=true;try{recognition.stop()}catch(e){};$("app").style.display="none";$("startScreen").style.display="flex"}
 const tut=[
+ {title:"How to play",demo:"🎮",text:"Say a card number, match two pictures, then say the English name.",main:"",alts:[],mini:true},
  {title:"Practise the object names",demo:"🎯",text:"Push any object name below to hear its American English pronunciation.",main:"",alts:[]},
  {title:"Choose a card",demo:"🔢",text:"Say the number of the card you want to reveal.",main:"Card twenty",alts:["Twenty","Number twenty","Open card twenty","Choose card twenty","Show number twenty"]},
  {title:"Practise all card numbers",demo:"🔢",text:"Push any number below to hear its American English pronunciation.",main:"Twenty",alts:["Twenty"]}
-];let ti=0;
+];let tutorialRestoreVoice=false;
+let ti=0;
 function refreshCategoryTutorial(){
- const d=tut[0];
+ const d=tut[1];
  const label=selectedGenre==="animals"?"animal":selectedGenre==="fruit"?"fruit":selectedGenre==="food"?"food":selectedGenre==="sports"?"sport":"object";
  d.title=`Practise the ${label} names`;
  const items=(Array.isArray(animals)&&animals.length)?animals:(categories[selectedGenre]||categories.animals);
@@ -1908,28 +1943,88 @@ function refreshCategoryTutorial(){
  d.demo=(items[0]&&items[0].icon)||"🎯";
  const cardCount=boardSizes[selectedSize].pairs*2;
  const numberNames=Array.from({length:cardCount},(_,i)=>titleNumber(startingNumber+i));
- tut[2].alts=numberNames;
- tut[2].main=numberNames[0]||titleNumber(startingNumber);
+ tut[3].alts=numberNames;
+ tut[3].main=numberNames[0]||titleNumber(startingNumber);
  const firstWord=numberToWords(startingNumber);
- tut[1].main=`Card ${firstWord}`;
- tut[1].alts=[titleNumber(startingNumber),`Number ${firstWord}`,`Open card ${firstWord}`,`Choose card ${firstWord}`,`Show number ${firstWord}`];
- tut[1].demo="🔢";
+ tut[2].main=`Card ${firstWord}`;
+ tut[2].alts=[titleNumber(startingNumber),`Number ${firstWord}`,`Open card ${firstWord}`,`Choose card ${firstWord}`,`Show number ${firstWord}`];
+ tut[2].demo="🔢";
+}
+
+let tutorialMiniTimers=[];
+function clearTutorialMiniTimers(){tutorialMiniTimers.forEach(clearTimeout);tutorialMiniTimers=[];}
+function tutorialMiniLater(fn,ms){tutorialMiniTimers.push(setTimeout(fn,ms));}
+function drawTutorialMini(faces={}){
+ const nums=[startingNumber,startingNumber+1,startingNumber+2,startingNumber+3];
+ const icons=["🐶","🐴","🐶","🐴"];
+ $("tutorialMiniBoard").innerHTML=nums.map((n,i)=>{
+   const state=faces[i];
+   return `<button class="tutorialMiniCard ${state==="matched"?"face matched":state?"face":""}" type="button">${state?icons[i]:n}</button>`;
+ }).join("");
+}
+function playTutorialMiniDemo(){
+ clearTutorialMiniTimers();
+ try{speechSynthesis.cancel()}catch(e){}
+ drawTutorialMini({});
+ $("tutorialMiniChallenge").style.display="none";
+ $("tutorialMiniStatus").textContent="Listen and watch the example.";
+ const n1=startingNumber,n2=startingNumber+1,n3=startingNumber+2,n4=startingNumber+3;
+
+ // First try: 21 dog + 22 horse = not a match.
+ tutorialMiniLater(()=>{speak(numberToWords(n1),.78);$("tutorialMiniStatus").textContent=`Say “${titleNumber(n1)}”.`;},600);
+ tutorialMiniLater(()=>{drawTutorialMini({0:true});$("tutorialMiniStatus").textContent="Card opened.";},2200);
+ tutorialMiniLater(()=>{speak(numberToWords(n2),.78);$("tutorialMiniStatus").textContent=`Now say “${titleNumber(n2)}”.`;},4000);
+ tutorialMiniLater(()=>{drawTutorialMini({0:true,1:true});$("tutorialMiniStatus").textContent="Not a match.";},5600);
+ tutorialMiniLater(()=>{speak("Not a match.",.78);},6900);
+ tutorialMiniLater(()=>{drawTutorialMini({});$("tutorialMiniStatus").textContent="Try again and remember the pictures.";},8200);
+
+ // Second try: 23 dog + 21 dog = match, then naming challenge.
+ tutorialMiniLater(()=>{speak(numberToWords(n3),.78);$("tutorialMiniStatus").textContent=`Say “${titleNumber(n3)}”.`;},9800);
+ tutorialMiniLater(()=>{drawTutorialMini({2:true});$("tutorialMiniStatus").textContent="Card opened.";},11400);
+ tutorialMiniLater(()=>{speak(numberToWords(n1),.78);$("tutorialMiniStatus").textContent=`Now say “${titleNumber(n1)}”.`;},13200);
+ tutorialMiniLater(()=>{
+   drawTutorialMini({0:true,2:true});
+   $("tutorialMiniChallenge").style.display="block";
+   $("tutorialMiniStatus").textContent="They match! Say the picture name.";
+ },14800);
+ tutorialMiniLater(()=>{speak("dog",.78);$("tutorialMiniStatus").textContent="Dog. Correct!";},16600);
+ tutorialMiniLater(()=>{
+   $("tutorialMiniChallenge").style.display="none";
+   drawTutorialMini({0:"matched",2:"matched"});
+ },17900);
+
+ // Finish the board: 22 horse + 24 horse.
+ tutorialMiniLater(()=>{speak(numberToWords(n2),.78);$("tutorialMiniStatus").textContent=`Now say “${titleNumber(n2)}”.`;},19500);
+ tutorialMiniLater(()=>{drawTutorialMini({0:"matched",1:true,2:"matched"});$("tutorialMiniStatus").textContent="Card opened.";},21100);
+ tutorialMiniLater(()=>{speak(numberToWords(n4),.78);$("tutorialMiniStatus").textContent=`Now say “${titleNumber(n4)}”.`;},22900);
+ tutorialMiniLater(()=>{
+   drawTutorialMini({0:"matched",1:true,2:"matched",3:true});
+   $("tutorialMiniChallenge").style.display="block";
+   $("tutorialMiniStatus").textContent="They match! Say the picture name.";
+ },24500);
+ tutorialMiniLater(()=>{speak("horse",.78);$("tutorialMiniStatus").textContent="Horse. Correct!";},26300);
+ tutorialMiniLater(()=>{
+   $("tutorialMiniChallenge").style.display="none";
+   drawTutorialMini({0:"matched",1:"matched",2:"matched",3:"matched"});
+ },27600);
+ tutorialMiniLater(()=>{speak("Great job!",.78);$("tutorialMiniStatus").textContent="Great job! You completed the game.";},28900);
 }
 function announceTutorialPage(){
  refreshCategoryTutorial();
  const d=tut[ti];
  if(!d)return;
+ if(d.mini){ return; }
 
  // Automatically show the same visual as the first spoken item.
  $("tDemo").classList.remove("tutorialClickedPreview");
- if(ti===0){
+ if(ti===1){
   const item=(d.items||[]).find(a=>a.name.toLowerCase()===d.main.toLowerCase());
   if(item){
    $("tDemo").classList.add("tutorialClickedPreview");
    $("tDemo").textContent=item.icon;
   }
- }else if(ti===1 || ti===2){
-  const phrase=ti===1?d.main.replace(/^Card\s+/i,""):d.main;
+ }else if(ti===2 || ti===3){
+  const phrase=ti===2?d.main.replace(/^Card\s+/i,""):d.main;
   const n=Array.from({length:boardSizes[selectedSize].pairs*2},(_,i)=>startingNumber+i)
    .find(x=>numberToWords(x)===phrase.toLowerCase());
   if(n!==undefined){
@@ -1949,6 +2044,18 @@ function showTut(){
  $("tDemo").classList.remove("tutorialClickedPreview");
  $("tDemo").textContent=d.demo;
  $("tText").textContent=d.text;
+ const mini=!!d.mini;
+ $("tutorialMiniGame").style.display=mini?"block":"none";
+ $("tDemo").style.display=mini?"none":"";
+ $("alts").parentElement.style.display=mini?"none":"";
+ if(mini){
+   drawTutorialMini({});
+   $("tutorialMiniChallenge").style.display="none";
+   $("tutorialMiniStatus").textContent="The example will play when you open the tutorial.";
+   return;
+ }
+ clearTutorialMiniTimers();
+ $("alts").parentElement.style.display="";
  $("alts").classList.toggle("tutorialManyItems",d.alts.length>12);
  $("alts").innerHTML=d.alts.map((x,i)=>`<button class="alt" data-i="${i}">${x}</button>`).join("");
  const firstTutorialItem=document.querySelector("#alts .alt");
@@ -1957,42 +2064,59 @@ function showTut(){
    document.querySelectorAll("#alts .alt").forEach(x=>x.classList.remove("tutorialSelected"));
    b.classList.add("tutorialSelected");
    const phrase=d.alts[+b.dataset.i];
-  speak(phrase);
+   speak(phrase);
 
-  if(ti===0){
-   const item=(d.items||[]).find(a=>a.name.toLowerCase()===phrase.toLowerCase());
-   if(item){
-    $("tDemo").classList.add("tutorialClickedPreview");
-    $("tDemo").textContent=item.icon;
-    $("tText").textContent=learnerDefinitions[item.name]||`${item.name} is the English name of the object shown in the picture.`;
+   if(ti===1){
+    const item=(d.items||[]).find(a=>a.name.toLowerCase()===phrase.toLowerCase());
+    if(item){
+     $("tDemo").classList.add("tutorialClickedPreview");
+     $("tDemo").textContent=item.icon;
+     $("tText").textContent=learnerDefinitions[item.name]||`${item.name} is the English name of the object shown in the picture.`;
+    }
+   }else if(ti===2 || ti===3){
+    const clean=phrase.toLowerCase().replace(/^(number|open card|choose card|show number|card)\s+/,"");
+    const n=Array.from({length:boardSizes[selectedSize].pairs*2},(_,i)=>startingNumber+i)
+     .find(x=>numberToWords(x)===clean);
+    if(n!==undefined){
+     $("tDemo").classList.add("tutorialClickedPreview");
+     $("tDemo").innerHTML=`<div class="tutorialNumberPreview">${n}</div>`;
+    }
    }
-  }else if(ti===1 || ti===2){
-   const clean=phrase.toLowerCase().replace(/^(number|open card|choose card|show number|card)\s+/,"");
-   const n=Array.from({length:boardSizes[selectedSize].pairs*2},(_,i)=>startingNumber+i)
-    .find(x=>numberToWords(x)===clean);
-   if(n!==undefined){
-    $("tDemo").classList.add("tutorialClickedPreview");
-    $("tDemo").innerHTML=`<div class="tutorialNumberPreview">${n}</div>`;
-   }
-  }
-  animateDemo();
+   animateDemo();
  });
 }
 function animateDemo(){$("tDemo").animate([{transform:"scale(1)"},{transform:"scale(1.12)"},{transform:"scale(1)"}],{duration:650})}
 $("tutorialBtn").onclick=()=>{
+ tutorialRestoreVoice=!manualVoiceOff;
+ paused=true;
+ try{if(running)recognition.stop()}catch(e){}
+ updateVoiceButton();
+
  // Tutorial always turns the game microphone OFF.
  try{recognition&&recognition.stop()}catch(e){}
  paused=true;
  updateVoiceButton();
  $("tutorial").style.display="flex";
- ti=0;showTut();announceTutorialPage();
+ ti=0;showTut();playTutorialMiniDemo();
 }
+$("replayMiniDemo").onclick=()=>playTutorialMiniDemo();
 $("closeTut").onclick=()=>{
+ clearTutorialMiniTimers();
+ try{speechSynthesis.cancel()}catch(e){}
+ $("tutorialMiniChallenge").style.display="none";
  $("tutorial").style.display="none";
  // Returning to an active game automatically turns the microphone ON.
  if(gameStarted&&!awaitingName){
   setTimeout(()=>voiceOn(),300);
  }
+
+ if(tutorialRestoreVoice){
+   manualVoiceOff=false;
+   paused=false;
+   updateVoiceButton();
+   if(gameStarted && !awaitingName) setTimeout(startRecognition,250);
+ }
+ tutorialRestoreVoice=false;
 }
 if($("hearShow")) $("hearShow").onclick=()=>{
  const d=tut[ti];
@@ -2003,8 +2127,8 @@ if($("hearShow")) $("hearShow").onclick=()=>{
  }
  animateDemo();
 }
-$("prevT").onclick=()=>{ti=(ti+tut.length-1)%tut.length;showTut();announceTutorialPage()}
-$("nextT").onclick=()=>{ti=(ti+1)%tut.length;showTut();announceTutorialPage()}
+$("prevT").onclick=()=>{ti=(ti+tut.length-1)%tut.length;showTut();if(tut[ti].mini)playTutorialMiniDemo();else announceTutorialPage()}
+$("nextT").onclick=()=>{ti=(ti+1)%tut.length;showTut();if(tut[ti].mini)playTutorialMiniDemo();else announceTutorialPage()}
 showTut();
 </script>
 
