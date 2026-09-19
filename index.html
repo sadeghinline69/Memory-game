@@ -1925,14 +1925,14 @@ $("startGame").onclick=()=>{
 $("scoreRestart").onclick=()=>{$("scoreScreen").style.display="none";$("app").style.display="none";$("startScreen").style.display="flex"};
 $("restart").onclick=()=>{gameStarted=false;paused=true;try{recognition.stop()}catch(e){};$("app").style.display="none";$("startScreen").style.display="flex"}
 const tut=[
- {title:"How to play",demo:"🎮",text:"Say a card number, match two pictures, then say the English name.",main:"",alts:[],mini:true},
  {title:"Practise the object names",demo:"🎯",text:"Push any object name below to hear its American English pronunciation.",main:"",alts:[]},
+ {title:"How to play",demo:"🎮",text:"Say a card number, match two pictures, then say the English name.",main:"",alts:[],mini:true},
  {title:"Choose a card",demo:"🔢",text:"Say the number of the card you want to reveal.",main:"Card twenty",alts:["Twenty","Number twenty","Open card twenty","Choose card twenty","Show number twenty"]},
  {title:"Practise all card numbers",demo:"🔢",text:"Push any number below to hear its American English pronunciation.",main:"Twenty",alts:["Twenty"]}
 ];let tutorialRestoreVoice=false;
 let ti=0;
 function refreshCategoryTutorial(){
- const d=tut[1];
+ const d=tut[0];
  const label=selectedGenre==="animals"?"animal":selectedGenre==="fruit"?"fruit":selectedGenre==="food"?"food":selectedGenre==="sports"?"sport":"object";
  d.title=`Practise the ${label} names`;
  const items=(Array.isArray(animals)&&animals.length)?animals:(categories[selectedGenre]||categories.animals);
@@ -2017,7 +2017,7 @@ function announceTutorialPage(){
 
  // Automatically show the same visual as the first spoken item.
  $("tDemo").classList.remove("tutorialClickedPreview");
- if(ti===1){
+ if(ti===0){
   const item=(d.items||[]).find(a=>a.name.toLowerCase()===d.main.toLowerCase());
   if(item){
    $("tDemo").classList.add("tutorialClickedPreview");
@@ -2066,7 +2066,7 @@ function showTut(){
    const phrase=d.alts[+b.dataset.i];
    speak(phrase);
 
-   if(ti===1){
+   if(ti===0){
     const item=(d.items||[]).find(a=>a.name.toLowerCase()===phrase.toLowerCase());
     if(item){
      $("tDemo").classList.add("tutorialClickedPreview");
@@ -2097,7 +2097,7 @@ $("tutorialBtn").onclick=()=>{
  paused=true;
  updateVoiceButton();
  $("tutorial").style.display="flex";
- ti=0;showTut();playTutorialMiniDemo();
+ ti=0;showTut();if(tut[ti].mini)playTutorialMiniDemo();else announceTutorialPage();
 }
 $("replayMiniDemo").onclick=()=>playTutorialMiniDemo();
 $("closeTut").onclick=()=>{
