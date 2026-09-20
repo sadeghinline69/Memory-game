@@ -1516,6 +1516,8 @@ function randomNamingPrompt(){
 }
 let vocabRetryTimer=null;
 let cardRetryTimer=null;
+let vocabAnswerAttempts=0;
+let vocabRecognitionGotFinal=false;
 function scheduleCardListeningRetry(){
  clearTimeout(cardRetryTimer);
  if(paused||!gameStarted||awaitingName)return;
@@ -1529,7 +1531,7 @@ function startVocabularyListening(){
  try{if(running)recognition.stop()}catch(e){}
  setTimeout(()=>{
   if(!awaitingName||!answerArmed)return;
-  try{recognition.lang="en-US";recognition.start()}catch(e){
+  try{vocabRecognitionGotFinal=false;recognition.lang="en-US";recognition.start()}catch(e){
    clearTimeout(vocabRetryTimer);
    vocabRetryTimer=setTimeout(startVocabularyListening,500);
   }
@@ -1537,6 +1539,7 @@ function startVocabularyListening(){
 }
 function beginNameChallenge(){
  voiceOff();
+ vocabAnswerAttempts=0; vocabRecognitionGotFinal=false;
  awaitingName=true;answerArmed=false;locked=true;
  if(onlineMode&&onlineHost)setTimeout(broadcastOnlineState,20);
  $("promptAnimal").textContent=matchedAnimal.icon;
@@ -1655,9 +1658,34 @@ function applyNameResult(ok){
  }
 }
 function checkAnimal(text){
- if(!awaitingName || !matchedAnimal)return;
+ if(!awaitingName || !matchedAnimal || !answerArmed)return;
  let s=normalize(text),name=matchedAnimal.name;
- applyNameResult(animalAnswerAccepted(s,name));
+ if(animalAnswerAccepted(s,name)){
+  applyNameResult(true);
+  return;
+ }
+ vocabAnswerAttempts++;
+ if(vocabAnswerAttempts<2){
+  // One extra chance: wait one second, then listen again.
+  answerArmed=false;
+  const ab=$("answerBtn");
+  ab.disabled=true;
+  $("nameStatus").textContent="Try again — you have one more chance.";
+  setMessage("Try again — say the name one more time.");
+  clearTimeout(vocabRetryTimer);
+  vocabRetryTimer=setTimeout(()=>{
+   if(!awaitingName)return;
+   answerArmed=true;
+   ab.disabled=false;
+   ab.classList.remove("vocabOff");
+   ab.classList.add("vocabOn");
+   ab.textContent="🟢 Voice ON — Try Again";
+   $("nameStatus").textContent="Listening… say the object name again.";
+   startVocabularyListening();
+  },1000);
+  return;
+ }
+ applyNameResult(false);
 }
 
 function nextPlayer(){player=player%numPlayers+1;$("currentPlayer").textContent=player;renderPlayers();voiceOff();setMessage(`Player ${player}: turn Voice ON when you are ready.`);speak(`Player ${player}, it's your turn.`)}
@@ -1837,7 +1865,7 @@ if(SR){
  }
  text=text.trim();
  // Wait for the final phrase so "twenty four" is not prematurely read as "twenty".
- if(text&&hasFinal)handleSpeech(text);
+ if(text&&hasFinal){vocabRecognitionGotFinal=awaitingName&&answerArmed;handleSpeech(text);}
 };
  recognition.onend=()=>{
  running=false;
@@ -1848,7 +1876,16 @@ if(SR){
  }
  if(!paused&&gameStarted&&!awaitingName)scheduleCardListeningRetry();
 };
- recognition.onerror=e=>{running=false;$("transcript").textContent="Voice: "+e.error};
+ recognition.onerror=e=>{
+ running=false;
+ $("transcript").textContent="Voice: "+e.error;
+ // Browser microphone failures/no-speech do not use a vocabulary attempt.
+ // If the name dialog is still waiting for an answer, automatically listen again.
+ if(awaitingName&&answerArmed&&!vocabRecognitionGotFinal){
+  clearTimeout(vocabRetryTimer);
+  vocabRetryTimer=setTimeout(startVocabularyListening,450);
+ }
+};
 }else{$("transcript").textContent="Speech recognition is not supported in this browser."}
 function updateVoiceButton(){
  const b=$("voiceToggle"); if(!b)return;
@@ -1872,7 +1909,7 @@ $("answerBtn").onclick=()=>{
  $("nameStatus").textContent="Listening… say the animal now.";
  // Restart recognition so this button creates a fresh, deliberate answer window.
  try{if(running)recognition.stop()}catch(e){}
- setTimeout(()=>{if(recognition){try{recognition.lang="en-US";recognition.start()}catch(e){}}},220);
+ setTimeout(()=>{if(recognition){try{vocabRecognitionGotFinal=false;recognition.lang="en-US";recognition.start()}catch(e){}}},220);
 };
 $("voiceToggle").onclick=()=>{
  if(awaitingName)return;
@@ -2222,7 +2259,7 @@ function onlineSendToPlayer(index,msg){
 }
 function startPrivateOnlineChallenge(animal,prompt){
  if(!onlineMode||onlineHost||!animal)return;
- matchedAnimal=animal;awaitingName=true;answerArmed=false;locked=true;paused=true;
+ matchedAnimal=animal;vocabAnswerAttempts=0;vocabRecognitionGotFinal=false;awaitingName=true;answerArmed=false;locked=true;paused=true;
  $("promptAnimal").textContent=animal.icon;
  const ab=$("answerBtn");ab.disabled=true;ab.classList.remove("vocabOn");ab.classList.add("vocabOff");ab.textContent="🔴 Voice OFF";
  $("nameStatus").textContent=prompt;$("namePrompt").style.display="flex";setMessage(prompt);
