@@ -818,10 +818,7 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
    <div id="roomReady" style="display:none;margin-top:7px">
     <div style="font-weight:900">Room: <span id="roomCodeLabel"></span></div>
     <div id="onlinePlayers" style="font-size:12px;margin:4px 0"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px">
-     <button type="button" id="shareRoomBtn" class="secondary" style="width:100%">📤 Share Room</button>
-     <button type="button" id="onlineStartBtn" class="primary" style="width:100%">Start Online Game</button>
-    </div>
+    <button type="button" id="onlineStartBtn" class="primary" style="width:100%">Start Online Game</button>
    </div>
   </div>
   <label id="playerCountWrap"><b>Number of Players</b><br>
@@ -1928,14 +1925,14 @@ $("startGame").onclick=()=>{
 $("scoreRestart").onclick=()=>{$("scoreScreen").style.display="none";$("app").style.display="none";$("startScreen").style.display="flex"};
 $("restart").onclick=()=>{gameStarted=false;paused=true;try{recognition.stop()}catch(e){};$("app").style.display="none";$("startScreen").style.display="flex"}
 const tut=[
- {title:"Practise the object names",demo:"🎯",text:"Push any object name below to hear its American English pronunciation.",main:"",alts:[]},
  {title:"How to play",demo:"🎮",text:"Say a card number, match two pictures, then say the English name.",main:"",alts:[],mini:true},
+ {title:"Practise the object names",demo:"🎯",text:"Push any object name below to hear its American English pronunciation.",main:"",alts:[]},
  {title:"Choose a card",demo:"🔢",text:"Say the number of the card you want to reveal.",main:"Card twenty",alts:["Twenty","Number twenty","Open card twenty","Choose card twenty","Show number twenty"]},
  {title:"Practise all card numbers",demo:"🔢",text:"Push any number below to hear its American English pronunciation.",main:"Twenty",alts:["Twenty"]}
 ];let tutorialRestoreVoice=false;
 let ti=0;
 function refreshCategoryTutorial(){
- const d=tut[0];
+ const d=tut[1];
  const label=selectedGenre==="animals"?"animal":selectedGenre==="fruit"?"fruit":selectedGenre==="food"?"food":selectedGenre==="sports"?"sport":"object";
  d.title=`Practise the ${label} names`;
  const items=(Array.isArray(animals)&&animals.length)?animals:(categories[selectedGenre]||categories.animals);
@@ -2020,7 +2017,7 @@ function announceTutorialPage(){
 
  // Automatically show the same visual as the first spoken item.
  $("tDemo").classList.remove("tutorialClickedPreview");
- if(ti===0){
+ if(ti===1){
   const item=(d.items||[]).find(a=>a.name.toLowerCase()===d.main.toLowerCase());
   if(item){
    $("tDemo").classList.add("tutorialClickedPreview");
@@ -2069,7 +2066,7 @@ function showTut(){
    const phrase=d.alts[+b.dataset.i];
    speak(phrase);
 
-   if(ti===0){
+   if(ti===1){
     const item=(d.items||[]).find(a=>a.name.toLowerCase()===phrase.toLowerCase());
     if(item){
      $("tDemo").classList.add("tutorialClickedPreview");
@@ -2100,7 +2097,7 @@ $("tutorialBtn").onclick=()=>{
  paused=true;
  updateVoiceButton();
  $("tutorial").style.display="flex";
- ti=0;showTut();if(tut[ti].mini)playTutorialMiniDemo();else announceTutorialPage();
+ ti=0;showTut();playTutorialMiniDemo();
 }
 $("replayMiniDemo").onclick=()=>playTutorialMiniDemo();
 $("closeTut").onclick=()=>{
@@ -2339,46 +2336,12 @@ function resolveOnlineNameResult(actorIdx,ok){
  }
  setTimeout(broadcastOnlineState,30);
 }
-let onlineRecoverTimer=null, onlineRecovering=false;
-function peerIsHealthy(){return !!(onlinePeer&&!onlinePeer.destroyed&&onlinePeer.open&&!onlinePeer.disconnected)}
-function shareOnlineRoom(){
- if(!onlineRoomCode){ostatus("Create or join a room first.");return}
- const text=onlineRoomCode;
- if(navigator.share){navigator.share({text}).catch(()=>{})}
- else if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>ostatus("Sharing is unavailable here. Room code copied instead.")).catch(()=>fallbackCopyRoom(text))}
- else fallbackCopyRoom(text)
-}
-function fallbackCopyRoom(text){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");ostatus("Room code copied — send it to your friend.")}catch(e){ostatus(`Room code: ${onlineRoomCode}`)}ta.remove()}
-function scheduleOnlineRecovery(){clearTimeout(onlineRecoverTimer);onlineRecoverTimer=setTimeout(()=>{if(!onlineMode||document.hidden)return;if(onlineHost)recoverHostPeer();else reconnectGuestToHost()},700)}
-function recoverHostPeer(){
- if(!onlineMode||!onlineHost||!onlineRoomCode||onlineRecovering)return;
- if(peerIsHealthy()){ostatus("Room ready — share the code with your friends.");return}
- onlineRecovering=true;ostatus("Restoring room connection…");
- try{if(onlinePeer&&!onlinePeer.destroyed&&onlinePeer.disconnected){onlinePeer.reconnect();setTimeout(()=>{onlineRecovering=false;if(!peerIsHealthy())recreateHostPeer()},1800)}else{onlineRecovering=false;recreateHostPeer()}}catch(e){onlineRecovering=false;recreateHostPeer()}
-}
-function recreateHostPeer(){
- if(!onlineMode||!onlineHost||!onlineRoomCode)return;
- try{if(onlinePeer&&!onlinePeer.destroyed)onlinePeer.destroy()}catch(e){}
- onlineRecovering=true;onlinePeer=new Peer("emm-"+onlineRoomCode.toLowerCase());
- onlinePeer.on("open",id=>{onlineRoster=[{peer:id,name:onlineMe}];peerConns=[];$("roomCodeLabel").textContent=onlineRoomCode;$("roomReady").style.display="block";$("onlineStartBtn").style.display="block";onlineRecovering=false;ostatus("Room restored — friends can reconnect with the same code.");updateRosterUI()});
- onlinePeer.on("connection",attachGuest);onlinePeer.on("disconnected",()=>{if(!document.hidden)scheduleOnlineRecovery()});onlinePeer.on("error",()=>{onlineRecovering=false;if(!document.hidden)scheduleOnlineRecovery()})
-}
-function reconnectGuestToHost(){
- if(!onlineMode||onlineHost||!onlineRoomCode||!onlinePeer||onlinePeer.destroyed||(hostConn&&hostConn.open))return;
- ostatus("Restoring connection to the room…");
- try{if(onlinePeer.disconnected)onlinePeer.reconnect();const connect=()=>{if(!onlinePeer.open){setTimeout(connect,500);return}hostConn=onlinePeer.connect("emm-"+onlineRoomCode.toLowerCase(),{reliable:true});hostConn.on("open",()=>{hostConn.send({type:"hello",name:onlineMe});ostatus("Reconnected to the room.")});hostConn.on("data",handleRecoveredGuestData);hostConn.on("close",()=>{if(!document.hidden)scheduleOnlineRecovery()})};connect()}catch(e){scheduleOnlineRecovery()}
-}
-function handleRecoveredGuestData(m){if(m.type==="roster"){onlineRoster=m.roster||[];updateRosterUI()}else if(m.type==="state")applyOnlineState(m);else if(m.type==="roomEnded"){gameStarted=false;setMessage("The host ended the online room.")}else if(m.type==="privateCard")speak(m.name||"");else if(m.type==="privateChallenge")startPrivateOnlineChallenge(m.animal,m.prompt);else if(m.type==="privateFeedback"){if(m.message)setMessage(m.message);if(m.text)speak(m.text)}}
-document.addEventListener("visibilitychange",()=>{if(!onlineMode)return;if(document.hidden){clearTimeout(onlineRecoverTimer);return}scheduleOnlineRecovery()});
-window.addEventListener("pageshow",()=>{if(onlineMode)scheduleOnlineRecovery()});window.addEventListener("online",()=>{if(onlineMode)scheduleOnlineRecovery()});
 function createOnlineRoom(){
  if(typeof Peer==="undefined"){ostatus("Online library could not load. Check your internet connection.");return}
  onlineMode=true;onlineHost=true;onlineMe=safeName();onlineRoomCode=makeRoomCode();ostatus("Creating room…");
  onlinePeer=new Peer("emm-"+onlineRoomCode.toLowerCase());
  onlinePeer.on("open",id=>{onlineRoster=[{peer:id,name:onlineMe}];$("roomCodeLabel").textContent=onlineRoomCode;$("roomReady").style.display="block";$("onlineStartBtn").style.display="block";ostatus("Room ready — share the code with your friends.");updateRosterUI()});
- onlinePeer.on("connection",attachGuest);
- onlinePeer.on("disconnected",()=>{ostatus("Connection paused — the room will restore when you return.");if(!document.hidden)scheduleOnlineRecovery()});
- onlinePeer.on("error",e=>{const t=(e&&e.type)||"";if(t==="unavailable-id")ostatus("That room code is temporarily busy. Please try again.");else{ostatus("Connection interrupted — trying to restore the room…");if(!document.hidden)scheduleOnlineRecovery()}});
+ onlinePeer.on("connection",attachGuest);onlinePeer.on("error",e=>ostatus("Room error. Try creating another room."));
 }
 function joinOnlineRoom(){
  if(typeof Peer==="undefined"){ostatus("Online library could not load. Check your internet connection.");return}
@@ -2407,10 +2370,9 @@ function joinOnlineRoom(){
    else if(m.type==="state")applyOnlineState(m);
    else if(m.type==="roomEnded"){gameStarted=false;setMessage("The host ended the online room.")}
   });
-  hostConn.on("close",()=>{ostatus("Connection interrupted — trying to reconnect…");if(gameStarted)setMessage("Connection paused. Reconnecting…");if(!document.hidden)scheduleOnlineRecovery()});
+  hostConn.on("close",()=>{ostatus("Disconnected from the host.");if(gameStarted)setMessage("Connection to the host was lost.")});
  });
- onlinePeer.on("disconnected",()=>{ostatus("Connection paused — reconnecting when you return.");if(!document.hidden)scheduleOnlineRecovery()});
- onlinePeer.on("error",e=>{const t=(e&&e.type)||"";if(t==="peer-unavailable")ostatus("Could not find that room. Check the code and try again.");else{ostatus("Connection interrupted — trying to reconnect…");if(!document.hidden)scheduleOnlineRecovery()}});
+ onlinePeer.on("error",()=>ostatus("Could not join that room. Check the code and try again."));
 }
 function startHostedOnlineGame(){
  if(!onlineHost)return; if(onlineRoster.length<2){ostatus("At least 2 players are needed.");return}
@@ -2441,7 +2403,7 @@ $("localPlayBtn").onclick=()=>{onlineMode=false;updatePlayTypeButtons();$("start
 $("onlinePlayBtn").onclick=()=>{onlineMode=true;updatePlayTypeButtons();$("startScreen").classList.add("onlineSetup");$("onlineLobby").style.display="block";$("playerCountWrap").style.display="none";$("startGame").style.display="none"};
 updatePlayTypeButtons();
 $("showJoinBtn").onclick=()=>{$("joinFields").style.display="block"};
-$("createRoomBtn").onclick=createOnlineRoom;$("joinRoomBtn").onclick=joinOnlineRoom;$("onlineStartBtn").onclick=startHostedOnlineGame;$("shareRoomBtn").onclick=shareOnlineRoom;
+$("createRoomBtn").onclick=createOnlineRoom;$("joinRoomBtn").onclick=joinOnlineRoom;$("onlineStartBtn").onclick=startHostedOnlineGame;
 // Online turn handling (V100): each player chooses BOTH cards; correct match keeps the turn, wrong match passes it.
 // The turn changes only after the complete pair attempt has been resolved.
 const originalChooseCard=chooseCard;
