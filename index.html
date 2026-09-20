@@ -2343,9 +2343,9 @@ let onlineRecoverTimer=null, onlineRecovering=false;
 function peerIsHealthy(){return !!(onlinePeer&&!onlinePeer.destroyed&&onlinePeer.open&&!onlinePeer.disconnected)}
 function shareOnlineRoom(){
  if(!onlineRoomCode){ostatus("Create or join a room first.");return}
- const text=`Join my English Memory Match game!\nRoom code: ${onlineRoomCode}`;
- if(navigator.share){navigator.share({title:"English Memory Match",text}).catch(()=>{})}
- else if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>ostatus("Room code copied — send it to your friend.")).catch(()=>fallbackCopyRoom(text))}
+ const text=onlineRoomCode;
+ if(navigator.share){navigator.share({text}).catch(()=>{})}
+ else if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>ostatus("Sharing is unavailable here. Room code copied instead.")).catch(()=>fallbackCopyRoom(text))}
  else fallbackCopyRoom(text)
 }
 function fallbackCopyRoom(text){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");ostatus("Room code copied — send it to your friend.")}catch(e){ostatus(`Room code: ${onlineRoomCode}`)}ta.remove()}
