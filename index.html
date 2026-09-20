@@ -818,7 +818,10 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
    <div id="roomReady" style="display:none;margin-top:7px">
     <div style="font-weight:900">Room: <span id="roomCodeLabel"></span></div>
     <div id="onlinePlayers" style="font-size:12px;margin:4px 0"></div>
-    <button type="button" id="onlineStartBtn" class="primary" style="width:100%">Start Online Game</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px">
+     <button type="button" id="shareRoomBtn" class="secondary" style="width:100%">📤 Share Room</button>
+     <button type="button" id="onlineStartBtn" class="primary" style="width:100%">Start Online Game</button>
+    </div>
    </div>
   </div>
   <label id="playerCountWrap"><b>Number of Players</b><br>
@@ -1516,8 +1519,6 @@ function randomNamingPrompt(){
 }
 let vocabRetryTimer=null;
 let cardRetryTimer=null;
-let vocabAnswerAttempts=0;
-let vocabRecognitionGotFinal=false;
 function scheduleCardListeningRetry(){
  clearTimeout(cardRetryTimer);
  if(paused||!gameStarted||awaitingName)return;
@@ -1531,7 +1532,7 @@ function startVocabularyListening(){
  try{if(running)recognition.stop()}catch(e){}
  setTimeout(()=>{
   if(!awaitingName||!answerArmed)return;
-  try{vocabRecognitionGotFinal=false;recognition.lang="en-US";recognition.start()}catch(e){
+  try{recognition.lang="en-US";recognition.start()}catch(e){
    clearTimeout(vocabRetryTimer);
    vocabRetryTimer=setTimeout(startVocabularyListening,500);
   }
@@ -1539,7 +1540,6 @@ function startVocabularyListening(){
 }
 function beginNameChallenge(){
  voiceOff();
- vocabAnswerAttempts=0; vocabRecognitionGotFinal=false;
  awaitingName=true;answerArmed=false;locked=true;
  if(onlineMode&&onlineHost)setTimeout(broadcastOnlineState,20);
  $("promptAnimal").textContent=matchedAnimal.icon;
@@ -1658,34 +1658,9 @@ function applyNameResult(ok){
  }
 }
 function checkAnimal(text){
- if(!awaitingName || !matchedAnimal || !answerArmed)return;
+ if(!awaitingName || !matchedAnimal)return;
  let s=normalize(text),name=matchedAnimal.name;
- if(animalAnswerAccepted(s,name)){
-  applyNameResult(true);
-  return;
- }
- vocabAnswerAttempts++;
- if(vocabAnswerAttempts<2){
-  // One extra chance: wait one second, then listen again.
-  answerArmed=false;
-  const ab=$("answerBtn");
-  ab.disabled=true;
-  $("nameStatus").textContent="Try again — you have one more chance.";
-  setMessage("Try again — say the name one more time.");
-  clearTimeout(vocabRetryTimer);
-  vocabRetryTimer=setTimeout(()=>{
-   if(!awaitingName)return;
-   answerArmed=true;
-   ab.disabled=false;
-   ab.classList.remove("vocabOff");
-   ab.classList.add("vocabOn");
-   ab.textContent="🟢 Voice ON — Try Again";
-   $("nameStatus").textContent="Listening… say the object name again.";
-   startVocabularyListening();
-  },1000);
-  return;
- }
- applyNameResult(false);
+ applyNameResult(animalAnswerAccepted(s,name));
 }
 
 function nextPlayer(){player=player%numPlayers+1;$("currentPlayer").textContent=player;renderPlayers();voiceOff();setMessage(`Player ${player}: turn Voice ON when you are ready.`);speak(`Player ${player}, it's your turn.`)}
@@ -1865,7 +1840,7 @@ if(SR){
  }
  text=text.trim();
  // Wait for the final phrase so "twenty four" is not prematurely read as "twenty".
- if(text&&hasFinal){vocabRecognitionGotFinal=awaitingName&&answerArmed;handleSpeech(text);}
+ if(text&&hasFinal)handleSpeech(text);
 };
  recognition.onend=()=>{
  running=false;
@@ -1876,16 +1851,7 @@ if(SR){
  }
  if(!paused&&gameStarted&&!awaitingName)scheduleCardListeningRetry();
 };
- recognition.onerror=e=>{
- running=false;
- $("transcript").textContent="Voice: "+e.error;
- // Browser microphone failures/no-speech do not use a vocabulary attempt.
- // If the name dialog is still waiting for an answer, automatically listen again.
- if(awaitingName&&answerArmed&&!vocabRecognitionGotFinal){
-  clearTimeout(vocabRetryTimer);
-  vocabRetryTimer=setTimeout(startVocabularyListening,450);
- }
-};
+ recognition.onerror=e=>{running=false;$("transcript").textContent="Voice: "+e.error};
 }else{$("transcript").textContent="Speech recognition is not supported in this browser."}
 function updateVoiceButton(){
  const b=$("voiceToggle"); if(!b)return;
@@ -1909,7 +1875,7 @@ $("answerBtn").onclick=()=>{
  $("nameStatus").textContent="Listening… say the animal now.";
  // Restart recognition so this button creates a fresh, deliberate answer window.
  try{if(running)recognition.stop()}catch(e){}
- setTimeout(()=>{if(recognition){try{vocabRecognitionGotFinal=false;recognition.lang="en-US";recognition.start()}catch(e){}}},220);
+ setTimeout(()=>{if(recognition){try{recognition.lang="en-US";recognition.start()}catch(e){}}},220);
 };
 $("voiceToggle").onclick=()=>{
  if(awaitingName)return;
@@ -2259,7 +2225,7 @@ function onlineSendToPlayer(index,msg){
 }
 function startPrivateOnlineChallenge(animal,prompt){
  if(!onlineMode||onlineHost||!animal)return;
- matchedAnimal=animal;vocabAnswerAttempts=0;vocabRecognitionGotFinal=false;awaitingName=true;answerArmed=false;locked=true;paused=true;
+ matchedAnimal=animal;awaitingName=true;answerArmed=false;locked=true;paused=true;
  $("promptAnimal").textContent=animal.icon;
  const ab=$("answerBtn");ab.disabled=true;ab.classList.remove("vocabOn");ab.classList.add("vocabOff");ab.textContent="🔴 Voice OFF";
  $("nameStatus").textContent=prompt;$("namePrompt").style.display="flex";setMessage(prompt);
@@ -2373,12 +2339,46 @@ function resolveOnlineNameResult(actorIdx,ok){
  }
  setTimeout(broadcastOnlineState,30);
 }
+let onlineRecoverTimer=null, onlineRecovering=false;
+function peerIsHealthy(){return !!(onlinePeer&&!onlinePeer.destroyed&&onlinePeer.open&&!onlinePeer.disconnected)}
+function shareOnlineRoom(){
+ if(!onlineRoomCode){ostatus("Create or join a room first.");return}
+ const text=`Join my English Memory Match game!\nRoom code: ${onlineRoomCode}`;
+ if(navigator.share){navigator.share({title:"English Memory Match",text}).catch(()=>{})}
+ else if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>ostatus("Room code copied — send it to your friend.")).catch(()=>fallbackCopyRoom(text))}
+ else fallbackCopyRoom(text)
+}
+function fallbackCopyRoom(text){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");ostatus("Room code copied — send it to your friend.")}catch(e){ostatus(`Room code: ${onlineRoomCode}`)}ta.remove()}
+function scheduleOnlineRecovery(){clearTimeout(onlineRecoverTimer);onlineRecoverTimer=setTimeout(()=>{if(!onlineMode||document.hidden)return;if(onlineHost)recoverHostPeer();else reconnectGuestToHost()},700)}
+function recoverHostPeer(){
+ if(!onlineMode||!onlineHost||!onlineRoomCode||onlineRecovering)return;
+ if(peerIsHealthy()){ostatus("Room ready — share the code with your friends.");return}
+ onlineRecovering=true;ostatus("Restoring room connection…");
+ try{if(onlinePeer&&!onlinePeer.destroyed&&onlinePeer.disconnected){onlinePeer.reconnect();setTimeout(()=>{onlineRecovering=false;if(!peerIsHealthy())recreateHostPeer()},1800)}else{onlineRecovering=false;recreateHostPeer()}}catch(e){onlineRecovering=false;recreateHostPeer()}
+}
+function recreateHostPeer(){
+ if(!onlineMode||!onlineHost||!onlineRoomCode)return;
+ try{if(onlinePeer&&!onlinePeer.destroyed)onlinePeer.destroy()}catch(e){}
+ onlineRecovering=true;onlinePeer=new Peer("emm-"+onlineRoomCode.toLowerCase());
+ onlinePeer.on("open",id=>{onlineRoster=[{peer:id,name:onlineMe}];peerConns=[];$("roomCodeLabel").textContent=onlineRoomCode;$("roomReady").style.display="block";$("onlineStartBtn").style.display="block";onlineRecovering=false;ostatus("Room restored — friends can reconnect with the same code.");updateRosterUI()});
+ onlinePeer.on("connection",attachGuest);onlinePeer.on("disconnected",()=>{if(!document.hidden)scheduleOnlineRecovery()});onlinePeer.on("error",()=>{onlineRecovering=false;if(!document.hidden)scheduleOnlineRecovery()})
+}
+function reconnectGuestToHost(){
+ if(!onlineMode||onlineHost||!onlineRoomCode||!onlinePeer||onlinePeer.destroyed||(hostConn&&hostConn.open))return;
+ ostatus("Restoring connection to the room…");
+ try{if(onlinePeer.disconnected)onlinePeer.reconnect();const connect=()=>{if(!onlinePeer.open){setTimeout(connect,500);return}hostConn=onlinePeer.connect("emm-"+onlineRoomCode.toLowerCase(),{reliable:true});hostConn.on("open",()=>{hostConn.send({type:"hello",name:onlineMe});ostatus("Reconnected to the room.")});hostConn.on("data",handleRecoveredGuestData);hostConn.on("close",()=>{if(!document.hidden)scheduleOnlineRecovery()})};connect()}catch(e){scheduleOnlineRecovery()}
+}
+function handleRecoveredGuestData(m){if(m.type==="roster"){onlineRoster=m.roster||[];updateRosterUI()}else if(m.type==="state")applyOnlineState(m);else if(m.type==="roomEnded"){gameStarted=false;setMessage("The host ended the online room.")}else if(m.type==="privateCard")speak(m.name||"");else if(m.type==="privateChallenge")startPrivateOnlineChallenge(m.animal,m.prompt);else if(m.type==="privateFeedback"){if(m.message)setMessage(m.message);if(m.text)speak(m.text)}}
+document.addEventListener("visibilitychange",()=>{if(!onlineMode)return;if(document.hidden){clearTimeout(onlineRecoverTimer);return}scheduleOnlineRecovery()});
+window.addEventListener("pageshow",()=>{if(onlineMode)scheduleOnlineRecovery()});window.addEventListener("online",()=>{if(onlineMode)scheduleOnlineRecovery()});
 function createOnlineRoom(){
  if(typeof Peer==="undefined"){ostatus("Online library could not load. Check your internet connection.");return}
  onlineMode=true;onlineHost=true;onlineMe=safeName();onlineRoomCode=makeRoomCode();ostatus("Creating room…");
  onlinePeer=new Peer("emm-"+onlineRoomCode.toLowerCase());
  onlinePeer.on("open",id=>{onlineRoster=[{peer:id,name:onlineMe}];$("roomCodeLabel").textContent=onlineRoomCode;$("roomReady").style.display="block";$("onlineStartBtn").style.display="block";ostatus("Room ready — share the code with your friends.");updateRosterUI()});
- onlinePeer.on("connection",attachGuest);onlinePeer.on("error",e=>ostatus("Room error. Try creating another room."));
+ onlinePeer.on("connection",attachGuest);
+ onlinePeer.on("disconnected",()=>{ostatus("Connection paused — the room will restore when you return.");if(!document.hidden)scheduleOnlineRecovery()});
+ onlinePeer.on("error",e=>{const t=(e&&e.type)||"";if(t==="unavailable-id")ostatus("That room code is temporarily busy. Please try again.");else{ostatus("Connection interrupted — trying to restore the room…");if(!document.hidden)scheduleOnlineRecovery()}});
 }
 function joinOnlineRoom(){
  if(typeof Peer==="undefined"){ostatus("Online library could not load. Check your internet connection.");return}
@@ -2407,9 +2407,10 @@ function joinOnlineRoom(){
    else if(m.type==="state")applyOnlineState(m);
    else if(m.type==="roomEnded"){gameStarted=false;setMessage("The host ended the online room.")}
   });
-  hostConn.on("close",()=>{ostatus("Disconnected from the host.");if(gameStarted)setMessage("Connection to the host was lost.")});
+  hostConn.on("close",()=>{ostatus("Connection interrupted — trying to reconnect…");if(gameStarted)setMessage("Connection paused. Reconnecting…");if(!document.hidden)scheduleOnlineRecovery()});
  });
- onlinePeer.on("error",()=>ostatus("Could not join that room. Check the code and try again."));
+ onlinePeer.on("disconnected",()=>{ostatus("Connection paused — reconnecting when you return.");if(!document.hidden)scheduleOnlineRecovery()});
+ onlinePeer.on("error",e=>{const t=(e&&e.type)||"";if(t==="peer-unavailable")ostatus("Could not find that room. Check the code and try again.");else{ostatus("Connection interrupted — trying to reconnect…");if(!document.hidden)scheduleOnlineRecovery()}});
 }
 function startHostedOnlineGame(){
  if(!onlineHost)return; if(onlineRoster.length<2){ostatus("At least 2 players are needed.");return}
@@ -2440,7 +2441,7 @@ $("localPlayBtn").onclick=()=>{onlineMode=false;updatePlayTypeButtons();$("start
 $("onlinePlayBtn").onclick=()=>{onlineMode=true;updatePlayTypeButtons();$("startScreen").classList.add("onlineSetup");$("onlineLobby").style.display="block";$("playerCountWrap").style.display="none";$("startGame").style.display="none"};
 updatePlayTypeButtons();
 $("showJoinBtn").onclick=()=>{$("joinFields").style.display="block"};
-$("createRoomBtn").onclick=createOnlineRoom;$("joinRoomBtn").onclick=joinOnlineRoom;$("onlineStartBtn").onclick=startHostedOnlineGame;
+$("createRoomBtn").onclick=createOnlineRoom;$("joinRoomBtn").onclick=joinOnlineRoom;$("onlineStartBtn").onclick=startHostedOnlineGame;$("shareRoomBtn").onclick=shareOnlineRoom;
 // Online turn handling (V100): each player chooses BOTH cards; correct match keeps the turn, wrong match passes it.
 // The turn changes only after the complete pair attempt has been resolved.
 const originalChooseCard=chooseCard;
