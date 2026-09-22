@@ -800,9 +800,19 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
 <div class="gameKidIntro" style="max-width:520px;margin:7px auto 10px;text-align:center;font-weight:800;font-size:14px;line-height:1.35">
   Find two matching pictures! 🧩
 </div>
-  <div id="playTypeBox" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 10px">
+  <div id="playTypeBox" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 10px">
    <button type="button" id="localPlayBtn" class="primary" style="background:#23a55a">📱 Local Game</button>
+   <button type="button" id="botPlayBtn" class="secondary">🤖 Bot Game</button>
    <button type="button" id="onlinePlayBtn" class="secondary">🌐 Online Game</button>
+  </div>
+  <div id="botDifficultyBox" style="display:none;border:2px solid #d9e2f3;border-radius:14px;padding:10px;margin:8px 0;background:#f8fbff">
+   <b>Bot Difficulty</b>
+   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:7px">
+    <button type="button" class="secondary botDifficultyBtn" data-bot-difficulty="easy">Easy</button>
+    <button type="button" class="secondary botDifficultyBtn" data-bot-difficulty="medium">Medium</button>
+    <button type="button" class="primary botDifficultyBtn selectedBotDifficulty" data-bot-difficulty="hard">Hard</button>
+   </div>
+   <div style="font-size:11px;font-weight:750;color:#506078;margin-top:7px">Hard perfectly remembers cards revealed during its own private turns, but never sees your private reveals or any hidden card.</div>
   </div>
   <div id="onlineLobby" style="display:none;border:2px solid #d9e2f3;border-radius:14px;padding:10px;margin:8px 0;background:#f8fbff">
    <input id="onlineName" class="setupSelect" maxlength="20" placeholder="Your name" aria-label="Your online player name" style="box-sizing:border-box;margin-bottom:7px">
@@ -878,12 +888,13 @@ button,input{font:inherit}.screen{position:fixed;inset:0;background:linear-gradi
   </div>
   <div class="creatorCredit">
    Designed &amp; Created by <strong>Sadegh Mosleh</strong><br>
-   <span>© 2026 Sadegh Mosleh. All rights reserved.</span>
+   <span>© 2026 Sadegh Mosleh. All rights reserved. · Version 8</span>
   </div>
  </div>
 </div>
 
 <div id="app">
+ <div style="position:fixed;right:6px;top:5px;z-index:80;background:#172033;color:white;border-radius:8px;padding:3px 7px;font:800 10px Arial;pointer-events:none">Version 8</div>
  <div class="top"><h2 style="margin:5px">🐾 English Memory Match</h2>
   <div class="stats"><div class="pill">Pairs <span id="pairs">0</span>/<span id="pairTotal">6</span></div></div>
  </div>
@@ -1487,7 +1498,8 @@ function renderBoard(){
  const cfg=boardSizes[selectedSize];
  $("board").style.gridTemplateColumns=`repeat(${cfg.cols}, minmax(0,1fr))`;
  $("board").innerHTML=deck.map(c=>{
-  const isOpen=c.matched || (first&&c.id===first.id) || (second&&c.id===second.id);
+  const privateBotTurn=typeof botMode!=="undefined"&&botMode&&player===2;
+  const isOpen=c.matched || (!privateBotTurn&&((first&&c.id===first.id)||(second&&c.id===second.id)));
   const cls=c.matched?"matched":(isOpen?"revealed":"");
   return `<button class="card ${cls}" data-id="${c.id}">${isOpen?`<span class="animal">${c.icon}</span>`:c.id}</button>`;
  }).join("");
@@ -1510,7 +1522,8 @@ function chooseCard(n){
   },1000);
   setTimeout(()=>{
    hide(first);hide(second);first=second=null;locked=false;
-   if(onlineMode){player=player%numPlayers+1;updateRosterUI();setMessage(`${onlineRoster[player-1]?.name||("Player "+player)}'s turn.`);broadcastOnlineState();}
+   if(typeof botMode!=="undefined"&&botMode){startBotTurn();}
+   else if(onlineMode){player=player%numPlayers+1;updateRosterUI();setMessage(`${onlineRoster[player-1]?.name||("Player "+player)}'s turn.`);broadcastOnlineState();}
    else{voiceOn();setMessage(`Player ${player}: voice is ON. Continue your board.`);}
   },2200)
  }
@@ -1647,7 +1660,8 @@ function applyNameResult(ok){
    answerArmed=false;
    first=second=null;
    if(deck.every(c=>c.matched)){
-    if(onlineMode){finishOnlineSharedGame();}else finishPlayerGame();
+    if(typeof botMode!=="undefined"&&botMode){finishBotGame();}
+    else if(onlineMode){finishOnlineSharedGame();}else finishPlayerGame();
    } else if(onlineMode){
     // Online rules: a correct match earns another turn for the SAME player.
     locked=false;updateRosterUI();renderOnlineLiveScoreboard();
@@ -1668,7 +1682,8 @@ function applyNameResult(ok){
    $("namePrompt").style.display="none";
    answerArmed=false;
    hide(first);hide(second);first=second=null;locked=false;
-   if(onlineMode){player=player%numPlayers+1;updateRosterUI();setMessage(`${onlineRoster[player-1]?.name||("Player "+player)}'s turn.`);broadcastOnlineState();}
+   if(typeof botMode!=="undefined"&&botMode){startBotTurn();}
+   else if(onlineMode){player=player%numPlayers+1;updateRosterUI();setMessage(`${onlineRoster[player-1]?.name||("Player "+player)}'s turn.`);broadcastOnlineState();}
    else{voiceOn();setMessage(`Player ${player}: voice is ON. Continue your board.`);}
   },900);
  }
@@ -2549,6 +2564,106 @@ applyNameResult=function(ok){
  originalApplyNameResult(ok);
 };
 
+// Version 8: private bot turns plus difficulty-based memory of the bot's own reveals only.
+let botMode=false,botDifficulty="hard",botMemory=new Map(),botTimer=null,botPlannedSecondId=null;
+function botRemember(card){
+ if(!botMode||!card)return;
+ if(botDifficulty==="hard"||botDifficulty==="medium"&&Math.random()<.68)botMemory.set(card.id,card.pair);
+}
+function botAvailable(){return deck.filter(c=>!c.matched)}
+function botKnownPair(){
+ const groups=new Map();
+ botAvailable().forEach(c=>{if(!botMemory.has(c.id))return;const p=botMemory.get(c.id);if(!groups.has(p))groups.set(p,[]);groups.get(p).push(c)});
+ const pairs=[...groups.values()].filter(g=>g.length>=2);
+ return pairs.length?pairs[Math.floor(Math.random()*pairs.length)].slice(0,2):null;
+}
+function randomFrom(list){return list.length?list[Math.floor(Math.random()*list.length)]:null}
+function botFirstChoice(){
+ const known=botKnownPair(),useKnown=botDifficulty==="hard"||(botDifficulty==="medium"&&Math.random()<.72);
+ if(known&&useKnown){botPlannedSecondId=known[1].id;return known[0]}
+ botPlannedSecondId=null;
+ const available=botAvailable(),unseen=available.filter(c=>!botMemory.has(c.id));
+ return randomFrom(unseen.length?unseen:available);
+}
+function botSecondChoice(a){
+ let planned=deck.find(c=>c.id===botPlannedSecondId&&!c.matched&&c.id!==a.id);
+ if(planned)return planned;
+ const rememberedMate=botAvailable().find(c=>c.id!==a.id&&botMemory.get(c.id)===a.pair);
+ if(rememberedMate&&(botDifficulty==="hard"||botDifficulty==="medium"&&Math.random()<.72))return rememberedMate;
+ const choices=botAvailable().filter(c=>c.id!==a.id);
+ const unseen=choices.filter(c=>!botMemory.has(c.id));
+ return randomFrom(unseen.length?unseen:choices);
+}
+function renderBotPlayers(){
+ $("currentPlayer").textContent=player;
+ $("players").innerHTML=`<div class="playerBox ${player===1?"active":""}">Player · ${scores[1]||0}</div><div class="playerBox ${player===2?"active":""}">Bot · ${scores[2]||0}</div>`;
+}
+const regularRenderPlayers=renderPlayers;
+renderPlayers=function(){if(botMode)renderBotPlayers();else regularRenderPlayers()};
+function startBotTurn(){
+ if(!botMode||!gameStarted)return;
+ voiceOff();player=2;locked=true;first=second=null;renderPlayers();setMessage("Bot is thinking…");
+ clearTimeout(botTimer);botTimer=setTimeout(botTakeTurn,850);
+}
+function botTakeTurn(){
+ if(!botMode||!gameStarted||player!==2)return;
+ const a=botFirstChoice();if(!a){finishBotGame();return}
+ first=a;markPrivateBotCard(a);botRemember(a);setMessage(`Bot selected card ${a.id}. Its face is private.`);
+ botTimer=setTimeout(()=>{
+  const b=botSecondChoice(a);if(!b){finishBotGame();return}
+  second=b;markPrivateBotCard(b);botRemember(b);setMessage(`Bot selected card ${b.id}. Its face is private.`);
+  botTimer=setTimeout(()=>resolveBotPair(a,b),1050);
+ },900);
+}
+function markPrivateBotCard(c){
+ const b=document.querySelector(`.card[data-id="${c.id}"]`);if(b)b.classList.add("botPrivatePick");
+}
+function resolveBotPair(a,b){
+ if(!botMode||!gameStarted)return;
+ if(a.pair===b.pair){
+  a.matched=b.matched=true;scores[2]=(scores[2]||0)+1;
+  $("pairs").textContent=deck.filter(c=>c.matched).length/2;first=second=null;renderBoard();renderPlayers();
+  setMessage("Bot found a match and plays again.");
+  if(deck.every(c=>c.matched)){botTimer=setTimeout(finishBotGame,650);return}
+  botTimer=setTimeout(botTakeTurn,950);
+ }else{
+  setMessage("Bot did not find a match.");
+  botTimer=setTimeout(()=>{first=second=null;player=1;locked=false;renderBoard();renderPlayers();setMessage("Your turn. Choose a card.");voiceOn();},1050);
+ }
+}
+function finishBotGame(){
+ if(!botMode)return;clearTimeout(botTimer);voiceOff();gameStarted=false;
+ if(liveTimerId){clearInterval(liveTimerId);liveTimerId=null}
+ const human=scores[1]||0,bot=scores[2]||0;
+ const result=human>bot?"You win!":bot>human?"Bot wins!":"It is a tie!";
+ $("scoreContent").innerHTML=`<h2>🏆 ${result}</h2><table class="scoreTable"><thead><tr><th>Player</th><th>Matches</th></tr></thead><tbody><tr><td>You</td><td><span class="scoreNumberRed">${human}</span></td></tr><tr><td>Bot (${botDifficulty[0].toUpperCase()+botDifficulty.slice(1)})</td><td><span class="scoreNumberRed">${bot}</span></td></tr></tbody></table>`;
+ $("scoreScreen").style.display="flex";speak(result);
+}
+function startBotGame(){
+ clearTimeout(botTimer);startingNumber=readStartingNumber();gameMode=$("gameMode").value||"practice";
+ $("tutorialBtn").style.display=gameMode==="exam"?"none":"";if(gameMode==="exam"){$("tutorial").style.display="none";try{speechSynthesis.cancel()}catch(e){}}
+ animals=pickSix(categories[selectedGenre],selectedDifficulty,boardSizes[selectedSize].pairs);numPlayers=2;scores={1:0,2:0};playerResults=[];player=1;
+ masterLayout=createMasterLayout();deck=freshDeckFromMaster();botMemory.clear();botPlannedSecondId=null;
+ first=second=matchedAnimal=null;awaitingName=false;answerArmed=false;locked=false;playerMismatches=0;playerSuccessfulMatches=0;
+ $("startScreen").style.display="none";$("app").style.display="block";$("onlineRoomBar").style.display="none";$("transcript").style.display=gameMode==="exam"?"none":"";
+ $("pairs").textContent=0;$("pairTotal").textContent=boardSizes[selectedSize].pairs;gameStarted=true;manualVoiceOff=false;paused=true;
+ playerStartTime=performance.now();if(liveTimerId)clearInterval(liveTimerId);liveTimerId=setInterval(updateLiveStats,100);updateLiveStats();renderBoard();renderPlayers();voiceOff();
+ setMessage("Player, get ready. You play first.");speak("Player, you play first.",.9,()=>{if(botMode&&gameStarted&&player===1)voiceOn()});
+}
+const regularStartHandler=$("startGame").onclick;
+$("startGame").onclick=()=>{if(botMode)startBotGame();else regularStartHandler()};
+const chooseCardBeforeBot=chooseCard;
+chooseCard=function(n){if(botMode&&player!==1){setMessage("Please wait. The bot is playing.");return}chooseCardBeforeBot(n)};
+function paintPlayMode(active){
+ [["localPlayBtn","local"],["botPlayBtn","bot"],["onlinePlayBtn","online"]].forEach(([id,mode])=>{const b=$(id),on=active===mode;b.className=on?"primary":"secondary";b.style.background=on?"#23a55a":"white";b.style.color=on?"white":""});
+}
+const localModeHandler=$("localPlayBtn").onclick,onlineModeHandler=$("onlinePlayBtn").onclick;
+$("localPlayBtn").onclick=()=>{botMode=false;$("botDifficultyBox").style.display="none";localModeHandler();paintPlayMode("local")};
+$("onlinePlayBtn").onclick=()=>{botMode=false;$("botDifficultyBox").style.display="none";onlineModeHandler();paintPlayMode("online")};
+$("botPlayBtn").onclick=()=>{onlineMode=false;botMode=true;$("startScreen").classList.remove("onlineSetup");$("onlineLobby").style.display="none";$("playerCountWrap").style.display="none";$("startGame").style.display="block";$("botDifficultyBox").style.display="block";paintPlayMode("bot")};
+document.querySelectorAll(".botDifficultyBtn").forEach(btn=>btn.onclick=()=>{botDifficulty=btn.dataset.botDifficulty;document.querySelectorAll(".botDifficultyBtn").forEach(b=>{const on=b===btn;b.className=(on?"primary":"secondary")+" botDifficultyBtn"+(on?" selectedBotDifficulty":"")})});
+const regularRestartHandler=$("restart").onclick;$("restart").onclick=()=>{clearTimeout(botTimer);regularRestartHandler()};
+
 setInterval(()=>{if(onlineMode&&gameStarted)renderOnlineLiveScoreboard();},250);
 </script>
 
@@ -2571,4 +2686,6 @@ setInterval(()=>{if(onlineMode&&gameStarted)renderOnlineLiveScoreboard();},250);
 #players .playerBox.active::before,
 #players .playerBox.active::after{content:none;display:none}
 @media(max-width:380px){#players .playerBox{font-size:14px;padding:5px 8px}}
+/* Bot choices are indicated without exposing their private card faces. */
+.card.botPrivatePick{outline:5px solid #f2a31b;outline-offset:-5px;box-shadow:0 0 0 4px #fff7,0 0 20px #f2a31bbb,0 7px 0 #9a5b00;transform:scale(.97)}
 </style>
